@@ -16,8 +16,8 @@ COPY . .
 ENV NEXT_PUBLIC_API_URL=http://localhost:4000/api
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# Білдимо Next.js додаток (використовуємо TypeScript з м'якою перевіркою)
-RUN npx next build || (echo "Initial build failed, trying with type check disabled..." && SKIP_ENV_VALIDATION=true next build)
+# Білдимо Next.js додаток
+RUN npm run build
 
 # Production образ
 FROM node:20-alpine AS runner

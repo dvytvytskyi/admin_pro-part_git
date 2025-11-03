@@ -842,7 +842,7 @@ export default function AddPropertyPage() {
                       error={!!(errors as any).sizeFrom}
                     />
                     {(errors as any).sizeFrom && (
-                      <p className="mt-1 text-sm text-error-500">{errors.sizeFrom.message}</p>
+                      <p className="mt-1 text-sm text-error-500">{(errors as any).sizeFrom.message}</p>
                     )}
                     {sizeFromValue && parseFloat(sizeFromValue) > 0 && (
                       <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -869,7 +869,7 @@ export default function AddPropertyPage() {
                       error={!!(errors as any).sizeTo}
                     />
                     {(errors as any).sizeTo && (
-                      <p className="mt-1 text-sm text-error-500">{errors.sizeTo.message}</p>
+                      <p className="mt-1 text-sm text-error-500">{(errors as any).sizeTo.message}</p>
                     )}
                     {sizeToValue && parseFloat(sizeToValue) > 0 && (
                       <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">

@@ -1,29 +1,20 @@
 # Dependencies
 node_modules/
-.pnp
-.pnp.js
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
 
-# Testing
-coverage/
-
-# Production builds
+# Build outputs
 .next/
-out/
-build/
 dist/
-
-# Misc
-.DS_Store
-*.pem
-*.log
+build/
+*.tsbuildinfo
 
 # Environment variables
 .env
 .env.local
-.env.development.local
-.env.test.local
-.env.production.local
-.env.production
+.env*.local
 
 # IDE
 .vscode/
@@ -32,22 +23,28 @@ dist/
 *.swo
 *~
 
-# Database
-*.dump
-*.sql
-!admin-panel-backend/src/migrations/*.sql
+# OS
+.DS_Store
+Thumbs.db
 
-# Uploads
-admin-panel-backend/uploads/*
-!admin-panel-backend/uploads/.gitkeep
+# Logs
+logs/
+*.log
+
+# Database
+*.sql
+*.dump
+admin_panel_backup.*
 
 # Docker
 .docker/
 
-# Backups
-backups/
-*.backup
+# Uploads
+uploads/
+admin-backup/uploads/
 
 # Temporary files
 tmp/
 temp/
+.cache/
+
