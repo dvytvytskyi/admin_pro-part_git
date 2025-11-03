@@ -624,8 +624,9 @@ export default function APIDocumentationPage() {
     ? (process.env.NEXT_PUBLIC_API_URL || window.location.origin + '/api')
     : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api')
   
-  // Видаляємо /api з кінця, якщо вже є, бо endpoints вже містять /api
-  const apiBaseUrl = baseUrl.replace(/\/api$/, '') + '/api'
+  // Використовуємо правильний baseUrl
+  // Якщо NEXT_PUBLIC_API_URL вже містить /api, використовуємо як є
+  // Інакше додаємо /api
 
   return (
     <div className="space-y-6">
@@ -636,6 +637,16 @@ export default function APIDocumentationPage() {
         <p className="text-sm text-gray-500 dark:text-gray-400">
           Complete API reference for all available endpoints
         </p>
+        
+        {/* Backend Technology Info */}
+        <div className="mt-4 rounded-lg border border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-800/50 p-4">
+          <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Технологія бекенду:
+          </p>
+          <p className="text-xs text-gray-600 dark:text-gray-400">
+            Express.js 5.1 • Node.js • TypeScript • TypeORM • PostgreSQL
+          </p>
+        </div>
       </div>
 
       {/* Navigation */}
