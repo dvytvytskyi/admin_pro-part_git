@@ -626,12 +626,12 @@ export default function EditPropertyPage() {
                         field.onChange(e.target.value)
                       }}
                       placeholder="Enter property name"
-                      error={!!errors.name}
+                      error={!!(errors as any).name}
                     />
                   )}
                 />
-                {errors.name && (
-                  <p className="mt-1 text-sm text-error-500">{errors.name.message}</p>
+                {(errors as any).name && (
+                  <p className="mt-1 text-sm text-error-500">{(errors as any).name.message}</p>
                 )}
               </div>
 
@@ -643,8 +643,8 @@ export default function EditPropertyPage() {
                   defaultValue={selectedCountryId || ''}
                   onChange={handleCountryChange}
                 />
-                {errors.countryId && (
-                  <p className="mt-1 text-sm text-error-500">{errors.countryId.message}</p>
+                {(errors as any).countryId && (
+                  <p className="mt-1 text-sm text-error-500">{(errors as any).countryId.message}</p>
                 )}
               </div>
 
@@ -656,8 +656,8 @@ export default function EditPropertyPage() {
                   defaultValue={selectedCityId || ''}
                   onChange={handleCityChange}
                 />
-                {errors.cityId && (
-                  <p className="mt-1 text-sm text-error-500">{errors.cityId.message}</p>
+                {(errors as any).cityId && (
+                  <p className="mt-1 text-sm text-error-500">{(errors as any).cityId.message}</p>
                 )}
               </div>
 
@@ -669,8 +669,8 @@ export default function EditPropertyPage() {
                   defaultValue={watch('areaId') || ''}
                   onChange={(value) => setValue('areaId', value)}
                 />
-                {errors.areaId && (
-                  <p className="mt-1 text-sm text-error-500">{errors.areaId.message}</p>
+                {(errors as any).areaId && (
+                  <p className="mt-1 text-sm text-error-500">{(errors as any).areaId.message}</p>
                 )}
               </div>
 
@@ -690,12 +690,12 @@ export default function EditPropertyPage() {
                         field.onChange(e.target.value)
                       }}
                       placeholder="25.2048"
-                      error={!!errors.latitude}
+                      error={!!(errors as any).latitude}
                     />
                   )}
                 />
-                {errors.latitude && (
-                  <p className="mt-1 text-sm text-error-500">{errors.latitude.message}</p>
+                {(errors as any).latitude && (
+                  <p className="mt-1 text-sm text-error-500">{(errors as any).latitude.message}</p>
                 )}
               </div>
 
@@ -715,12 +715,12 @@ export default function EditPropertyPage() {
                         field.onChange(e.target.value)
                       }}
                       placeholder="55.2708"
-                      error={!!errors.longitude}
+                      error={!!(errors as any).longitude}
                     />
                   )}
                 />
-                {errors.longitude && (
-                  <p className="mt-1 text-sm text-error-500">{errors.longitude.message}</p>
+                {(errors as any).longitude && (
+                  <p className="mt-1 text-sm text-error-500">{(errors as any).longitude.message}</p>
                 )}
               </div>
             </div>
@@ -784,8 +784,8 @@ export default function EditPropertyPage() {
                   </div>
                 </div>
               )}
-              {errors.photos && (
-                <p className="mt-1 text-sm text-error-500">{errors.photos.message}</p>
+              {(errors as any).photos && (
+                <p className="mt-1 text-sm text-error-500">{(errors as any).photos.message}</p>
               )}
             </div>
           </div>
@@ -815,13 +815,13 @@ export default function EditPropertyPage() {
                             setPriceFromValue(value)
                           }}
                           placeholder="0.00"
-                          error={!!errors.priceFrom}
+                          error={!!(errors as any).priceFrom}
                         />
                       )}
                     />
-                    {errors.priceFrom && (
+                    {(errors as any).priceFrom && (
                       <p className="mt-1 text-sm text-error-500">
-                        {errors.priceFrom.message}
+                        {(errors as any).priceFrom.message}
                       </p>
                     )}
                     {priceFromValue && parseFloat(priceFromValue) > 0 && (
@@ -856,13 +856,13 @@ export default function EditPropertyPage() {
                             field.onChange(e.target.value)
                           }}
                           placeholder="0"
-                          error={!!errors.bedroomsFrom}
+                          error={!!(errors as any).bedroomsFrom}
                         />
                       )}
                     />
-                    {errors.bedroomsFrom && (
+                    {(errors as any).bedroomsFrom && (
                       <p className="mt-1 text-sm text-error-500">
-                        {errors.bedroomsFrom.message}
+                        {(errors as any).bedroomsFrom.message}
                       </p>
                     )}
                   </div>
@@ -882,12 +882,12 @@ export default function EditPropertyPage() {
                             field.onChange(e.target.value)
                           }}
                           placeholder="0"
-                          error={!!errors.bedroomsTo}
+                          error={!!(errors as any).bedroomsTo}
                         />
                       )}
                     />
-                    {errors.bedroomsTo && (
-                      <p className="mt-1 text-sm text-error-500">{errors.bedroomsTo.message}</p>
+                    {(errors as any).bedroomsTo && (
+                      <p className="mt-1 text-sm text-error-500">{(errors as any).bedroomsTo.message}</p>
                     )}
                   </div>
 
@@ -906,13 +906,13 @@ export default function EditPropertyPage() {
                             field.onChange(e.target.value)
                           }}
                           placeholder="0"
-                          error={!!errors.bathroomsFrom}
+                          error={!!(errors as any).bathroomsFrom}
                         />
                       )}
                     />
-                    {errors.bathroomsFrom && (
+                    {(errors as any).bathroomsFrom && (
                       <p className="mt-1 text-sm text-error-500">
-                        {errors.bathroomsFrom.message}
+                        {(errors as any).bathroomsFrom.message}
                       </p>
                     )}
                   </div>
@@ -932,12 +932,12 @@ export default function EditPropertyPage() {
                             field.onChange(e.target.value)
                           }}
                           placeholder="0"
-                          error={!!errors.bathroomsTo}
+                          error={!!(errors as any).bathroomsTo}
                         />
                       )}
                     />
-                    {errors.bathroomsTo && (
-                      <p className="mt-1 text-sm text-error-500">{errors.bathroomsTo.message}</p>
+                    {(errors as any).bathroomsTo && (
+                      <p className="mt-1 text-sm text-error-500">{(errors as any).bathroomsTo.message}</p>
                     )}
                   </div>
 
@@ -954,10 +954,10 @@ export default function EditPropertyPage() {
                         setValue('sizeFrom', value, { shouldValidate: true })
                       }}
                       placeholder="0.00"
-                      error={!!errors.sizeFrom}
+                      error={!!(errors as any).sizeFrom}
                     />
-                    {errors.sizeFrom && (
-                      <p className="mt-1 text-sm text-error-500">{errors.sizeFrom.message}</p>
+                    {(errors as any).sizeFrom && (
+                      <p className="mt-1 text-sm text-error-500">{(errors as any).sizeFrom.message}</p>
                     )}
                     {sizeFromValue && parseFloat(sizeFromValue) > 0 && (
                       <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -979,10 +979,10 @@ export default function EditPropertyPage() {
                         setValue('sizeTo', value, { shouldValidate: true })
                       }}
                       placeholder="0.00"
-                      error={!!errors.sizeTo}
+                      error={!!(errors as any).sizeTo}
                     />
-                    {errors.sizeTo && (
-                      <p className="mt-1 text-sm text-error-500">{errors.sizeTo.message}</p>
+                    {(errors as any).sizeTo && (
+                      <p className="mt-1 text-sm text-error-500">{(errors as any).sizeTo.message}</p>
                     )}
                     {sizeToValue && parseFloat(sizeToValue) > 0 && (
                       <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -1002,8 +1002,8 @@ export default function EditPropertyPage() {
                   onChange={(value) => setValue('description', value)}
                   placeholder="Enter description"
                 />
-                {errors.description && (
-                  <p className="mt-1 text-sm text-error-500">{errors.description.message}</p>
+                {(errors as any).description && (
+                  <p className="mt-1 text-sm text-error-500">{(errors as any).description.message}</p>
                 )}
               </div>
 
@@ -1185,10 +1185,10 @@ export default function EditPropertyPage() {
                         }
                       })}
                       placeholder="0.00"
-                      error={!!errors.price}
+                      error={!!(errors as any).price}
                     />
-                    {errors.price && (
-                      <p className="mt-1 text-sm text-error-500">{errors.price.message}</p>
+                    {(errors as any).price && (
+                      <p className="mt-1 text-sm text-error-500">{(errors as any).price.message}</p>
                     )}
                     {priceValue && parseFloat(priceValue) > 0 && (
                       <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -1222,12 +1222,12 @@ export default function EditPropertyPage() {
                             field.onChange(e.target.value)
                           }}
                           placeholder="0"
-                          error={!!errors.bedrooms}
+                          error={!!(errors as any).bedrooms}
                         />
                       )}
                     />
-                    {errors.bedrooms && (
-                      <p className="mt-1 text-sm text-error-500">{errors.bedrooms.message}</p>
+                    {(errors as any).bedrooms && (
+                      <p className="mt-1 text-sm text-error-500">{(errors as any).bedrooms.message}</p>
                     )}
                   </div>
 
@@ -1246,12 +1246,12 @@ export default function EditPropertyPage() {
                             field.onChange(e.target.value)
                           }}
                           placeholder="0"
-                          error={!!errors.bathrooms}
+                          error={!!(errors as any).bathrooms}
                         />
                       )}
                     />
-                    {errors.bathrooms && (
-                      <p className="mt-1 text-sm text-error-500">{errors.bathrooms.message}</p>
+                    {(errors as any).bathrooms && (
+                      <p className="mt-1 text-sm text-error-500">{(errors as any).bathrooms.message}</p>
                     )}
                   </div>
 
@@ -1270,10 +1270,10 @@ export default function EditPropertyPage() {
                         }
                       })}
                       placeholder="0.00"
-                      error={!!errors.size}
+                      error={!!(errors as any).size}
                     />
-                    {errors.size && (
-                      <p className="mt-1 text-sm text-error-500">{errors.size.message}</p>
+                    {(errors as any).size && (
+                      <p className="mt-1 text-sm text-error-500">{(errors as any).size.message}</p>
                     )}
                     {sizeValue && parseFloat(sizeValue) > 0 && (
                       <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
