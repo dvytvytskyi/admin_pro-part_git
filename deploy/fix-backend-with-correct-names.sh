@@ -42,7 +42,7 @@ if ! docker ps --format "{{.Names}}" | grep -q "^${DB_CONTAINER}$"; then
     sleep 5
 fi
 
-# Видалення старого backend контейнера
+# Видалення старого backend контейнера (включаючи з docker-compose)
 if docker ps -a --format "{{.Names}}" | grep -q "^${BACKEND_CONTAINER}$"; then
     echo ""
     echo "🛑 Видалення старого backend контейнера..."
@@ -51,13 +51,18 @@ if docker ps -a --format "{{.Names}}" | grep -q "^${BACKEND_CONTAINER}$"; then
     echo "✅ Видалено"
 fi
 
+# Також перевіряємо контейнери з docker-compose
+docker-compose -f docker-compose.prod.yml rm -f admin-panel-backend 2>/dev/null || true
+
 echo ""
 echo "🔄 Оновлення коду з Git..."
 git pull origin main
 
 echo ""
-echo "🔧 Перевірка та виправлення конфігурації БД..."
-./deploy/check-and-fix-db.sh
+echo "⚠️  УВАГА: Скрипт check-and-fix-db.sh може очистити БД!"
+echo "Пропускаємо перевірку БД, щоб не втратити дані"
+echo ""
+# ./deploy/check-and-fix-db.sh  # Пропускаємо, щоб не очистити БД
 
 echo ""
 echo "🏗️  Перебудова backend (без кешу)..."
