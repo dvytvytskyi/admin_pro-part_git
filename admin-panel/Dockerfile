@@ -31,9 +31,10 @@ RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
 # Копіюємо необхідні файли
-COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+# Копіюємо public (папка повинна існувати в проекті, навіть якщо порожня)
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
 USER nextjs
 
