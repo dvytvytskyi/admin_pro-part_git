@@ -53,18 +53,33 @@ app.get('/', (req, res) => {
 
 // Health check
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  const dbStatus = AppDataSource.isInitialized ? 'connected' : 'disconnected';
+  res.json({ 
+    status: 'ok', 
+    database: dbStatus,
+    timestamp: new Date().toISOString() 
+  });
 });
 
 // Initialize database and start server
 AppDataSource.initialize()
   .then(() => {
     console.log('✅ Database connected');
+    console.log('📊 Database entities loaded');
     app.listen(PORT, () => {
       console.log(`🚀 Admin Panel Backend running on http://localhost:${PORT}`);
     });
   })
   .catch((error) => {
     console.error('❌ Database connection failed:', error);
+    console.error('Error details:', error.message);
+    if (error.stack) {
+      console.error('Stack trace:', error.stack);
+    }
+    // Запускаємо сервер навіть якщо БД не підключилась, щоб бачити помилки
+    app.listen(PORT, () => {
+      console.log(`⚠️  Admin Panel Backend running WITHOUT database on http://localhost:${PORT}`);
+      console.log('⚠️  API will return errors until database is connected');
+    });
   });
 
