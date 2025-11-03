@@ -513,12 +513,12 @@ export default function AddPropertyPage() {
                         field.onChange(e.target.value)
                       }}
                       placeholder="Enter property name"
-                      error={!!errors.name}
+                      error={!!(errors as any).name}
                     />
                   )}
                 />
-                {errors.name && (
-                  <p className="mt-1 text-sm text-error-500">{errors.name.message}</p>
+                {(errors as any).name && (
+                  <p className="mt-1 text-sm text-error-500">{(errors as any).name.message}</p>
                 )}
               </div>
 
@@ -530,8 +530,8 @@ export default function AddPropertyPage() {
                   defaultValue={selectedCountryId || ''}
                   onChange={handleCountryChange}
                 />
-                {errors.countryId && (
-                  <p className="mt-1 text-sm text-error-500">{errors.countryId.message}</p>
+                {(errors as any).countryId && (
+                  <p className="mt-1 text-sm text-error-500">{(errors as any).countryId.message}</p>
                 )}
               </div>
 
@@ -543,8 +543,8 @@ export default function AddPropertyPage() {
                   defaultValue={selectedCityId || ''}
                   onChange={handleCityChange}
                 />
-                {errors.cityId && (
-                  <p className="mt-1 text-sm text-error-500">{errors.cityId.message}</p>
+                {(errors as any).cityId && (
+                  <p className="mt-1 text-sm text-error-500">{(errors as any).cityId.message}</p>
                 )}
               </div>
 
@@ -556,8 +556,8 @@ export default function AddPropertyPage() {
                   defaultValue={watch('areaId') || ''}
                   onChange={(value) => setValue('areaId', value)}
                 />
-                {errors.areaId && (
-                  <p className="mt-1 text-sm text-error-500">{errors.areaId.message}</p>
+                {(errors as any).areaId && (
+                  <p className="mt-1 text-sm text-error-500">{(errors as any).areaId.message}</p>
                 )}
               </div>
 
@@ -577,12 +577,12 @@ export default function AddPropertyPage() {
                         field.onChange(e.target.value)
                       }}
                       placeholder="25.2048"
-                      error={!!errors.latitude}
+                      error={!!(errors as any).latitude}
                     />
                   )}
                 />
-                {errors.latitude && (
-                  <p className="mt-1 text-sm text-error-500">{errors.latitude.message}</p>
+                {(errors as any).latitude && (
+                  <p className="mt-1 text-sm text-error-500">{(errors as any).latitude.message}</p>
                 )}
               </div>
 
@@ -602,12 +602,12 @@ export default function AddPropertyPage() {
                         field.onChange(e.target.value)
                       }}
                       placeholder="55.2708"
-                      error={!!errors.longitude}
+                      error={!!(errors as any).longitude}
                     />
                   )}
                 />
-                {errors.longitude && (
-                  <p className="mt-1 text-sm text-error-500">{errors.longitude.message}</p>
+                {(errors as any).longitude && (
+                  <p className="mt-1 text-sm text-error-500">{(errors as any).longitude.message}</p>
                 )}
               </div>
             </div>
@@ -671,8 +671,8 @@ export default function AddPropertyPage() {
                   </div>
                 </div>
               )}
-              {errors.photos && (
-                <p className="mt-1 text-sm text-error-500">{errors.photos.message}</p>
+              {(errors as any).photos && (
+                <p className="mt-1 text-sm text-error-500">{(errors as any).photos.message}</p>
               )}
             </div>
           </div>
@@ -1066,10 +1066,10 @@ export default function AddPropertyPage() {
                         }
                       })}
                       placeholder="0.00"
-                      error={!!errors.price}
+                      error={!!(errors as any).price}
                     />
-                    {errors.price && (
-                      <p className="mt-1 text-sm text-error-500">{errors.price.message}</p>
+                    {(errors as any).price && (
+                      <p className="mt-1 text-sm text-error-500">{(errors as any).price.message}</p>
                     )}
                     {priceValue && parseFloat(priceValue) > 0 && (
                       <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -1151,10 +1151,10 @@ export default function AddPropertyPage() {
                         }
                       })}
                       placeholder="0.00"
-                      error={!!errors.size}
+                      error={!!(errors as any).size}
                     />
-                    {errors.size && (
-                      <p className="mt-1 text-sm text-error-500">{errors.size.message}</p>
+                    {(errors as any).size && (
+                      <p className="mt-1 text-sm text-error-500">{(errors as any).size.message}</p>
                     )}
                     {sizeValue && parseFloat(sizeValue) > 0 && (
                       <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
