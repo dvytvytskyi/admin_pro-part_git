@@ -889,8 +889,8 @@ export default function AddPropertyPage() {
                   onChange={(value) => setValue('description', value)}
                   placeholder="Enter description"
                 />
-                {errors.description && (
-                  <p className="mt-1 text-sm text-error-500">{errors.description.message}</p>
+                {(errors as any).description && (
+                  <p className="mt-1 text-sm text-error-500">{(errors as any).description.message}</p>
                 )}
               </div>
 
@@ -1103,12 +1103,12 @@ export default function AddPropertyPage() {
                             field.onChange(e.target.value)
                           }}
                           placeholder="0"
-                          error={!!errors.bedrooms}
+                          error={!!(errors as any).bedrooms}
                         />
                       )}
                     />
-                    {errors.bedrooms && (
-                      <p className="mt-1 text-sm text-error-500">{errors.bedrooms.message}</p>
+                    {(errors as any).bedrooms && (
+                      <p className="mt-1 text-sm text-error-500">{(errors as any).bedrooms.message}</p>
                     )}
                   </div>
 
@@ -1127,12 +1127,12 @@ export default function AddPropertyPage() {
                             field.onChange(e.target.value)
                           }}
                           placeholder="0"
-                          error={!!errors.bathrooms}
+                          error={!!(errors as any).bathrooms}
                         />
                       )}
                     />
-                    {errors.bathrooms && (
-                      <p className="mt-1 text-sm text-error-500">{errors.bathrooms.message}</p>
+                    {(errors as any).bathrooms && (
+                      <p className="mt-1 text-sm text-error-500">{(errors as any).bathrooms.message}</p>
                     )}
                   </div>
 
