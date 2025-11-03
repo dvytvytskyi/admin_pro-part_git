@@ -1025,7 +1025,7 @@ export default function EditPropertyPage() {
                 </h2>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {facilities.map((facility) => {
-                    const facilityName = facility.nameEn || facility.nameRu || facility.nameAr || facility.name || 'Unnamed Facility'
+                    const facilityName = facility.nameEn || facility.nameRu || facility.nameAr || 'Unnamed Facility'
                     return (
                       <Checkbox
                         key={facility.id}
