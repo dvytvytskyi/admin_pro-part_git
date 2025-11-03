@@ -4,6 +4,7 @@ import bcrypt from 'bcrypt';
 import { AppDataSource } from '../config/database';
 import { User, UserRole, UserStatus } from '../entities/User';
 import { successResponse } from '../utils/response';
+import { authenticateJWT } from '../middleware/auth';
 
 const router = express.Router();
 
