@@ -700,11 +700,11 @@ export default function AddPropertyPage() {
                         }
                       })}
                       placeholder="0.00"
-                      error={!!errors.priceFrom}
+                      error={!!(errors as any).priceFrom}
                     />
-                    {errors.priceFrom && (
+                    {(errors as any).priceFrom && (
                       <p className="mt-1 text-sm text-error-500">
-                        {errors.priceFrom.message}
+                        {(errors as any).priceFrom.message}
                       </p>
                     )}
                     {priceFromValue && parseFloat(priceFromValue) > 0 && (
@@ -739,13 +739,13 @@ export default function AddPropertyPage() {
                             field.onChange(e.target.value)
                           }}
                           placeholder="0"
-                          error={!!errors.bedroomsFrom}
+                          error={!!(errors as any).bedroomsFrom}
                         />
                       )}
                     />
-                    {errors.bedroomsFrom && (
+                    {(errors as any).bedroomsFrom && (
                       <p className="mt-1 text-sm text-error-500">
-                        {errors.bedroomsFrom.message}
+                        {(errors as any).bedroomsFrom.message}
                       </p>
                     )}
                   </div>
@@ -765,12 +765,12 @@ export default function AddPropertyPage() {
                             field.onChange(e.target.value)
                           }}
                           placeholder="0"
-                          error={!!errors.bedroomsTo}
+                          error={!!(errors as any).bedroomsTo}
                         />
                       )}
                     />
-                    {errors.bedroomsTo && (
-                      <p className="mt-1 text-sm text-error-500">{errors.bedroomsTo.message}</p>
+                    {(errors as any).bedroomsTo && (
+                      <p className="mt-1 text-sm text-error-500">{(errors as any).bedroomsTo.message}</p>
                     )}
                   </div>
 
@@ -789,13 +789,13 @@ export default function AddPropertyPage() {
                             field.onChange(e.target.value)
                           }}
                           placeholder="0"
-                          error={!!errors.bathroomsFrom}
+                          error={!!(errors as any).bathroomsFrom}
                         />
                       )}
                     />
-                    {errors.bathroomsFrom && (
+                    {(errors as any).bathroomsFrom && (
                       <p className="mt-1 text-sm text-error-500">
-                        {errors.bathroomsFrom.message}
+                        {(errors as any).bathroomsFrom.message}
                       </p>
                     )}
                   </div>
@@ -815,12 +815,12 @@ export default function AddPropertyPage() {
                             field.onChange(e.target.value)
                           }}
                           placeholder="0"
-                          error={!!errors.bathroomsTo}
+                          error={!!(errors as any).bathroomsTo}
                         />
                       )}
                     />
-                    {errors.bathroomsTo && (
-                      <p className="mt-1 text-sm text-error-500">{errors.bathroomsTo.message}</p>
+                    {(errors as any).bathroomsTo && (
+                      <p className="mt-1 text-sm text-error-500">{(errors as any).bathroomsTo.message}</p>
                     )}
                   </div>
 
@@ -839,9 +839,9 @@ export default function AddPropertyPage() {
                         }
                       })}
                       placeholder="0.00"
-                      error={!!errors.sizeFrom}
+                      error={!!(errors as any).sizeFrom}
                     />
-                    {errors.sizeFrom && (
+                    {(errors as any).sizeFrom && (
                       <p className="mt-1 text-sm text-error-500">{errors.sizeFrom.message}</p>
                     )}
                     {sizeFromValue && parseFloat(sizeFromValue) > 0 && (
@@ -866,9 +866,9 @@ export default function AddPropertyPage() {
                         }
                       })}
                       placeholder="0.00"
-                      error={!!errors.sizeTo}
+                      error={!!(errors as any).sizeTo}
                     />
-                    {errors.sizeTo && (
+                    {(errors as any).sizeTo && (
                       <p className="mt-1 text-sm text-error-500">{errors.sizeTo.message}</p>
                     )}
                     {sizeToValue && parseFloat(sizeToValue) > 0 && (
