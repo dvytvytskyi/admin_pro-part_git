@@ -7,6 +7,7 @@ import { City } from '../entities/City';
 import { Area } from '../entities/Area';
 import { Developer } from '../entities/Developer';
 import { Facility } from '../entities/Facility';
+import { Course } from '../entities/Course';
 import { successResponse, errorResponse } from '../utils/response';
 import { Conversions } from '../utils/conversions';
 
@@ -45,7 +46,7 @@ const authenticateApiKey = async (req: express.Request, res: express.Response, n
 // GET /api/public/data - Get all public data
 router.get('/data', authenticateApiKey, async (req, res) => {
   try {
-    const [properties, countries, cities, areas, developers, facilities] = await Promise.all([
+    const [properties, countries, cities, areas, developers, facilities, courses] = await Promise.all([
       AppDataSource.getRepository(Property).find({
         relations: ['country', 'city', 'area', 'developer', 'facilities', 'units'],
         order: { createdAt: 'DESC' },
@@ -66,6 +67,10 @@ router.get('/data', authenticateApiKey, async (req, res) => {
       }),
       AppDataSource.getRepository(Facility).find({
         order: { nameEn: 'ASC' },
+      }),
+      AppDataSource.getRepository(Course).find({
+        relations: ['contents', 'links'],
+        order: { order: 'ASC' },
       }),
     ]);
 
@@ -200,6 +205,29 @@ router.get('/data', authenticateApiKey, async (req, res) => {
         iconName: f.iconName,
         createdAt: f.createdAt,
       })),
+      courses: courses.map(c => ({
+        id: c.id,
+        title: c.title,
+        description: c.description,
+        order: c.order,
+        contents: c.contents?.sort((a, b) => a.order - b.order).map(content => ({
+          id: content.id,
+          type: content.type,
+          title: content.title,
+          description: content.description,
+          imageUrl: content.imageUrl,
+          videoUrl: content.videoUrl,
+          order: content.order,
+        })) || [],
+        links: c.links?.sort((a, b) => a.order - b.order).map(link => ({
+          id: link.id,
+          title: link.title,
+          url: link.url,
+          order: link.order,
+        })) || [],
+        createdAt: c.createdAt,
+        updatedAt: c.updatedAt,
+      })),
       meta: {
         totalProperties: transformedProperties.length,
         totalCountries: countries.length,
@@ -207,12 +235,95 @@ router.get('/data', authenticateApiKey, async (req, res) => {
         totalAreas: areas.length,
         totalDevelopers: developers.length,
         totalFacilities: facilities.length,
+        totalCourses: courses.length,
         lastUpdated: new Date().toISOString(),
       },
     }));
   } catch (error: any) {
     console.error('Error fetching public data:', error);
     res.status(500).json(errorResponse('Failed to fetch data', error.message));
+  }
+});
+
+// GET /api/public/courses - Get all courses (public access with API key)
+router.get('/courses', authenticateApiKey, async (req, res) => {
+  try {
+    const courses = await AppDataSource.getRepository(Course).find({
+      relations: ['contents', 'links'],
+      order: { order: 'ASC' },
+    });
+
+    const transformedCourses = courses.map(c => ({
+      id: c.id,
+      title: c.title,
+      description: c.description,
+      order: c.order,
+      contents: c.contents?.sort((a, b) => a.order - b.order).map(content => ({
+        id: content.id,
+        type: content.type,
+        title: content.title,
+        description: content.description,
+        imageUrl: content.imageUrl,
+        videoUrl: content.videoUrl,
+        order: content.order,
+      })) || [],
+      links: c.links?.sort((a, b) => a.order - b.order).map(link => ({
+        id: link.id,
+        title: link.title,
+        url: link.url,
+        order: link.order,
+      })) || [],
+      createdAt: c.createdAt,
+      updatedAt: c.updatedAt,
+    }));
+
+    res.json(successResponse(transformedCourses));
+  } catch (error: any) {
+    console.error('Error fetching courses:', error);
+    res.status(500).json(errorResponse('Failed to fetch courses', error.message));
+  }
+});
+
+// GET /api/public/courses/:id - Get single course by ID
+router.get('/courses/:id', authenticateApiKey, async (req, res) => {
+  try {
+    const course = await AppDataSource.getRepository(Course).findOne({
+      where: { id: req.params.id },
+      relations: ['contents', 'links'],
+    });
+
+    if (!course) {
+      return res.status(404).json(errorResponse('Course not found'));
+    }
+
+    const transformedCourse = {
+      id: course.id,
+      title: course.title,
+      description: course.description,
+      order: course.order,
+      contents: course.contents?.sort((a, b) => a.order - b.order).map(content => ({
+        id: content.id,
+        type: content.type,
+        title: content.title,
+        description: content.description,
+        imageUrl: content.imageUrl,
+        videoUrl: content.videoUrl,
+        order: content.order,
+      })) || [],
+      links: course.links?.sort((a, b) => a.order - b.order).map(link => ({
+        id: link.id,
+        title: link.title,
+        url: link.url,
+        order: link.order,
+      })) || [],
+      createdAt: course.createdAt,
+      updatedAt: course.updatedAt,
+    };
+
+    res.json(successResponse(transformedCourse));
+  } catch (error: any) {
+    console.error('Error fetching course:', error);
+    res.status(500).json(errorResponse('Failed to fetch course', error.message));
   }
 });
 

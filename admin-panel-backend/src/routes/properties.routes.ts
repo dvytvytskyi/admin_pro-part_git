@@ -25,7 +25,9 @@ router.get('/', async (req, res) => {
       sizeTo,
       priceFrom,
       priceTo,
-      search
+      search,
+      sortBy,
+      sortOrder
     } = req.query;
     
     const where: any = {};
@@ -62,7 +64,11 @@ router.get('/', async (req, res) => {
 
     // Фільтр по кількості спалень (multiselect - можна передати кілька значень через кому)
     if (bedrooms) {
-      const bedroomsArray = Array.isArray(bedrooms) ? bedrooms : bedrooms.toString().split(',');
+      // Нормалізуємо bedrooms до масиву рядків
+      const bedroomsArray: string[] = Array.isArray(bedrooms) 
+        ? bedrooms.map(b => String(b))
+        : String(bedrooms).split(',');
+      
       const bedroomsConditions = bedroomsArray.map((bed: string, index: number) => {
         const bedNum = parseInt(bed.trim(), 10);
         if (isNaN(bedNum)) return null;
@@ -74,7 +80,7 @@ router.get('/', async (req, res) => {
           OR
           (property.propertyType = 'secondary' AND property.bedrooms = :bed${index})
         )`;
-      }).filter(Boolean);
+      }).filter((item): item is string => item !== null);
       
       if (bedroomsConditions.length > 0) {
         queryBuilder.andWhere(`(${bedroomsConditions.join(' OR ')})`);
@@ -134,6 +140,19 @@ router.get('/', async (req, res) => {
         `(LOWER(property.name) LIKE :search OR LOWER(property.description) LIKE :search)`,
         { search: searchTerm }
       );
+    }
+
+    // Сортування
+    const sortField = sortBy?.toString() || 'createdAt';
+    const sortDirection = sortOrder?.toString().toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+    
+    // Дозволені поля для сортування
+    const allowedSortFields = ['createdAt', 'name', 'price', 'priceFrom', 'size', 'sizeFrom'];
+    if (allowedSortFields.includes(sortField)) {
+      queryBuilder.orderBy(`property.${sortField}`, sortDirection);
+    } else {
+      // За замовчуванням сортування по даті створення
+      queryBuilder.orderBy('property.createdAt', 'DESC');
     }
 
     const properties = await queryBuilder.getMany();

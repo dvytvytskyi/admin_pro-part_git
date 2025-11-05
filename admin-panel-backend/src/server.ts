@@ -18,6 +18,7 @@ import publicRoutes from './routes/public.routes';
 import collectionsRoutes from './routes/collections.routes';
 import favoritesRoutes from './routes/favorites.routes';
 import investmentsRoutes from './routes/investments.routes';
+import courseProgressRoutes from './routes/course-progress.routes';
 
 dotenv.config();
 
@@ -43,6 +44,7 @@ app.use('/api/public', publicRoutes);
 app.use('/api/collections', collectionsRoutes);
 app.use('/api/favorites', favoritesRoutes);
 app.use('/api/investments', investmentsRoutes);
+app.use('/api/course-progress', courseProgressRoutes);
 
 // Root route
 app.get('/', (req, res) => {

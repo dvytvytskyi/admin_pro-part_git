@@ -155,6 +155,41 @@ router.delete('/cities/:id', async (req, res) => {
   }
 });
 
+router.put('/areas/:id', async (req, res) => {
+  try {
+    const { nameEn, nameRu, nameAr, cityId, description, infrastructure, images } = req.body;
+    
+    const area = await AppDataSource.getRepository(Area).findOne({
+      where: { id: req.params.id },
+    });
+    
+    if (!area) {
+      return res.status(404).json({ success: false, message: 'Area not found' });
+    }
+    
+    // Оновлюємо тільки передані поля
+    if (nameEn !== undefined) area.nameEn = nameEn.trim();
+    if (nameRu !== undefined) area.nameRu = nameRu.trim();
+    if (nameAr !== undefined) area.nameAr = nameAr.trim();
+    if (cityId !== undefined) area.cityId = cityId;
+    if (description !== undefined) area.description = description;
+    if (infrastructure !== undefined) area.infrastructure = infrastructure;
+    if (images !== undefined) {
+      // Перевірка що не більше 8 фото
+      if (images.length > 8) {
+        return res.status(400).json({ success: false, message: 'Maximum 8 images allowed' });
+      }
+      area.images = images;
+    }
+    
+    const updatedArea = await AppDataSource.getRepository(Area).save(area);
+    res.json(successResponse(updatedArea));
+  } catch (error: any) {
+    console.error('Error updating area:', error);
+    res.status(500).json({ success: false, message: error.message || 'Failed to update area' });
+  }
+});
+
 router.delete('/areas/:id', async (req, res) => {
   try {
     const area = await AppDataSource.getRepository(Area).findOne({
@@ -254,6 +289,39 @@ router.post('/developers', async (req, res) => {
     }
     
     res.status(500).json({ success: false, message: error.message || 'Failed to create developer' });
+  }
+});
+
+router.put('/developers/:id', async (req, res) => {
+  try {
+    const { name, logo, description, images } = req.body;
+
+    const developer = await AppDataSource.getRepository(Developer).findOne({
+      where: { id: req.params.id },
+    });
+
+    if (!developer) {
+      return res.status(404).json({ success: false, message: 'Developer not found' });
+    }
+
+    // Update only provided fields
+    if (name !== undefined) developer.name = name.trim();
+    if (logo !== undefined) developer.logo = logo || '';
+    if (description !== undefined) developer.description = description || '';
+    if (images !== undefined) {
+      // Validate images array
+      if (Array.isArray(images)) {
+        developer.images = images;
+      } else {
+        developer.images = undefined;
+      }
+    }
+
+    const updatedDeveloper = await AppDataSource.getRepository(Developer).save(developer);
+    res.json(successResponse(updatedDeveloper));
+  } catch (error: any) {
+    console.error('Error updating developer:', error);
+    res.status(500).json({ success: false, message: error.message || 'Failed to update developer' });
   }
 });
 

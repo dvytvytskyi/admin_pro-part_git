@@ -6,15 +6,28 @@ export interface AuthRequest extends Request {
 }
 
 export const authenticateJWT = (req: AuthRequest, res: Response, next: NextFunction) => {
-  const token = req.headers.authorization?.split(' ')[1];
-  if (!token) return res.status(401).json({ message: 'Unauthorized' });
+  const authHeader = req.headers.authorization;
+  if (!authHeader) {
+    return res.status(401).json({ message: 'Unauthorized: No authorization header' });
+  }
+
+  const token = authHeader.split(' ')[1];
+  if (!token) {
+    return res.status(401).json({ message: 'Unauthorized: No token provided' });
+  }
+
+  if (!process.env.ADMIN_JWT_SECRET) {
+    console.error('ADMIN_JWT_SECRET is not set in environment variables');
+    return res.status(500).json({ message: 'Server configuration error' });
+  }
 
   try {
-    const decoded = jwt.verify(token, process.env.ADMIN_JWT_SECRET!);
+    const decoded = jwt.verify(token, process.env.ADMIN_JWT_SECRET);
     req.user = decoded;
     next();
-  } catch (error) {
-    return res.status(403).json({ message: 'Invalid token' });
+  } catch (error: any) {
+    console.error('JWT verification error:', error.message);
+    return res.status(403).json({ message: `Invalid token: ${error.message}` });
   }
 };
 

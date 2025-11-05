@@ -3,8 +3,10 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import { AppDataSource } from '../config/database';
 import { User, UserRole, UserStatus } from '../entities/User';
+import { PasswordResetToken } from '../entities/PasswordResetToken';
 import { successResponse } from '../utils/response';
 import { authenticateJWT } from '../middleware/auth';
+import { sendResetCodeEmail } from '../services/email.service';
 
 const router = express.Router();
 
@@ -149,6 +151,193 @@ router.post('/register', async (req, res) => {
   } catch (error: any) {
     console.error('Registration error:', error);
     return res.status(500).json({ success: false, message: 'Failed to create user' });
+  }
+});
+
+// Generate 6-digit code
+const generateResetCode = (): string => {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+};
+
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Email is required' });
+    }
+
+    const userRepository = AppDataSource.getRepository(User);
+    const tokenRepository = AppDataSource.getRepository(PasswordResetToken);
+
+    // Find user by email
+    const user = await userRepository.findOne({
+      where: { email: email.toLowerCase().trim() },
+    });
+
+    // Always return success (security: don't reveal if email exists)
+    if (!user) {
+      return res.json(successResponse(null, 'If the email exists, a password reset code has been sent'));
+    }
+
+    // Generate 6-digit code
+    const code = generateResetCode();
+
+    // Generate reset token (JWT)
+    const resetToken = jwt.sign(
+      { userId: user.id, email: user.email, type: 'password-reset' },
+      process.env.ADMIN_JWT_SECRET!,
+      { expiresIn: '15m' }
+    );
+
+    // Invalidate any existing reset tokens for this user
+    await tokenRepository.update(
+      { userId: user.id, used: false },
+      { used: true }
+    );
+
+    // Create new reset token
+    const expiresAt = new Date();
+    expiresAt.setMinutes(expiresAt.getMinutes() + 15); // 15 minutes from now
+
+    const resetTokenEntity = tokenRepository.create({
+      userId: user.id,
+      code,
+      resetToken,
+      used: false,
+      expiresAt,
+    });
+
+    await tokenRepository.save(resetTokenEntity);
+
+    // Send email with code
+    await sendResetCodeEmail(user.email, code);
+
+    return res.json(successResponse(null, 'If the email exists, a password reset code has been sent'));
+  } catch (error: any) {
+    console.error('Error in forgot-password:', error);
+    return res.status(500).json({ success: false, message: 'Failed to process password reset request' });
+  }
+});
+
+router.post('/verify-reset-code', async (req, res) => {
+  try {
+    const { email, code } = req.body;
+
+    if (!email || !code) {
+      return res.status(400).json({ success: false, message: 'Email and code are required' });
+    }
+
+    const userRepository = AppDataSource.getRepository(User);
+    const tokenRepository = AppDataSource.getRepository(PasswordResetToken);
+
+    // Find user
+    const user = await userRepository.findOne({
+      where: { email: email.toLowerCase().trim() },
+    });
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'Invalid email or code' });
+    }
+
+    // Find active reset token
+    const resetTokenEntity = await tokenRepository.findOne({
+      where: {
+        userId: user.id,
+        code: code.trim(),
+        used: false,
+      },
+      order: { createdAt: 'DESC' },
+    });
+
+    if (!resetTokenEntity) {
+      return res.status(400).json({ success: false, message: 'Invalid or expired code' });
+    }
+
+    // Check if code is expired
+    if (new Date() > resetTokenEntity.expiresAt) {
+      return res.status(400).json({ success: false, message: 'Code has expired' });
+    }
+
+    // Return reset token (client will use this for reset-password)
+    return res.json(successResponse({
+      resetToken: resetTokenEntity.resetToken,
+    }));
+  } catch (error: any) {
+    console.error('Error in verify-reset-code:', error);
+    return res.status(500).json({ success: false, message: 'Failed to verify code' });
+  }
+});
+
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { resetToken, newPassword } = req.body;
+
+    if (!resetToken || !newPassword) {
+      return res.status(400).json({ success: false, message: 'Reset token and new password are required' });
+    }
+
+    // Validate password strength
+    if (newPassword.length < 8) {
+      return res.status(400).json({ success: false, message: 'Password must be at least 8 characters long' });
+    }
+
+    // Verify reset token
+    let decoded: any;
+    try {
+      decoded = jwt.verify(resetToken, process.env.ADMIN_JWT_SECRET!);
+      if (decoded.type !== 'password-reset') {
+        return res.status(400).json({ success: false, message: 'Invalid reset token' });
+      }
+    } catch (error) {
+      return res.status(400).json({ success: false, message: 'Invalid or expired reset token' });
+    }
+
+    const userRepository = AppDataSource.getRepository(User);
+    const tokenRepository = AppDataSource.getRepository(PasswordResetToken);
+
+    // Find user
+    const user = await userRepository.findOne({
+      where: { id: decoded.userId },
+    });
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // Find and verify reset token entity
+    const resetTokenEntity = await tokenRepository.findOne({
+      where: {
+        userId: user.id,
+        resetToken,
+        used: false,
+      },
+    });
+
+    if (!resetTokenEntity) {
+      return res.status(400).json({ success: false, message: 'Invalid or already used reset token' });
+    }
+
+    // Check if token is expired
+    if (new Date() > resetTokenEntity.expiresAt) {
+      return res.status(400).json({ success: false, message: 'Reset token has expired' });
+    }
+
+    // Hash new password
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+
+    // Update user password
+    user.passwordHash = passwordHash;
+    await userRepository.save(user);
+
+    // Mark reset token as used
+    resetTokenEntity.used = true;
+    await tokenRepository.save(resetTokenEntity);
+
+    return res.json(successResponse(null, 'Password reset successfully'));
+  } catch (error: any) {
+    console.error('Error in reset-password:', error);
+    return res.status(500).json({ success: false, message: 'Failed to reset password' });
   }
 });
 

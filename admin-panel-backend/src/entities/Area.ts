@@ -22,10 +22,19 @@ export class Area {
   @Column()
   nameAr!: string;
 
-  @Column('text', { nullable: true })
-  description?: string;
+  @Column('jsonb', { nullable: true })
+  description?: {
+    title?: string;
+    description?: string;
+  };
+
+  @Column('jsonb', { nullable: true })
+  infrastructure?: {
+    title?: string;
+    description?: string;
+  };
 
   @Column('simple-array', { nullable: true })
-  images?: string[]; // Масив URL фото
+  images?: string[]; // Масив URL фото (до 8 штук, 3x4 або 4x3)
 }
 

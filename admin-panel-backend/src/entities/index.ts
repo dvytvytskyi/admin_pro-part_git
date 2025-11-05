@@ -18,6 +18,8 @@ export { ApiKey } from './ApiKey';
 export { Collection } from './Collection';
 export { Favorite } from './Favorite';
 export { Investment, InvestmentStatus } from './Investment';
+export { PasswordResetToken } from './PasswordResetToken';
+export { CourseProgress } from './CourseProgress';
 
 // Array of all entities for TypeORM DataSource
 import { User } from './User';
@@ -39,6 +41,8 @@ import { ApiKey } from './ApiKey';
 import { Collection } from './Collection';
 import { Favorite } from './Favorite';
 import { Investment } from './Investment';
+import { PasswordResetToken } from './PasswordResetToken';
+import { CourseProgress } from './CourseProgress';
 
 export const entities = [
   User,
@@ -60,5 +64,7 @@ export const entities = [
   Collection,
   Favorite,
   Investment,
+  PasswordResetToken,
+  CourseProgress,
 ];
 
