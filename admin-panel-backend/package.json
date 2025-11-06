@@ -31,7 +31,8 @@
     "fix:dubai-area-assignments": "ts-node-dev src/scripts/fix-dubai-area-assignments.ts",
     "fix:dubai-area-assignments:apply": "ts-node-dev src/scripts/fix-dubai-area-assignments.ts --apply",
     "import:districts": "ts-node-dev src/scripts/import-districts-data.ts",
-    "check:developers": "ts-node-dev src/scripts/check-developers-data.ts"
+    "check:developers": "ts-node-dev src/scripts/check-developers-data.ts",
+    "import:developers": "ts-node-dev src/scripts/import-developers-data.ts"
   },
   "keywords": [],
   "author": "",
