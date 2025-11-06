@@ -84,7 +84,7 @@ async function redistributePropertiesAreas() {
     }
 
     // Отримуємо всі об'єкти
-    console.log('\n📊 Отримання всіх об'єктів...');
+    console.log('\n📊 Отримання всіх об\'єктів...');
     const allProperties = await propertyRepo.find({
       select: ['id', 'name', 'areaId'],
     });
@@ -92,13 +92,13 @@ async function redistributePropertiesAreas() {
     console.log(`   Знайдено об'єктів: ${allProperties.length}`);
 
     if (allProperties.length === 0) {
-      console.log('⚠️  Об'єктів не знайдено. Завершення.');
+      console.log('⚠️  Об\'єктів не знайдено. Завершення.');
       await AppDataSource.destroy();
       return;
     }
 
     // Розподіляємо об'єкти рівномірно між areas
-    console.log('\n🔄 Розподіл об'єктів між areas...');
+    console.log('\n🔄 Розподіл об\'єктів між areas...');
     const propertiesPerArea = Math.ceil(allProperties.length / areas.length);
 
     // Групуємо об'єкти по target areaId для batch оновлення
@@ -122,8 +122,8 @@ async function redistributePropertiesAreas() {
     }
 
     // Виконуємо batch оновлення через SQL для швидкості
-    console.log(`   Буде оновлено: ${allProperties.length - skippedCount} об'єктів`);
-    console.log(`   Пропущено: ${skippedCount} об'єктів`);
+    console.log(`   Буде оновлено: ${allProperties.length - skippedCount} об\'єктів`);
+    console.log(`   Пропущено: ${skippedCount} об\'єктів`);
     
     let updatedCount = 0;
 
@@ -157,14 +157,14 @@ async function redistributePropertiesAreas() {
     }
 
     console.log(`\n✅ Оновлення завершено!`);
-    console.log(`   - Оновлено об'єктів: ${updatedCount}`);
+    console.log(`   - Оновлено об\'єктів: ${updatedCount}`);
     console.log(`   - Пропущено (вже правильний areaId): ${skippedCount}`);
 
     // Перевірка результатів
     console.log('\n📊 Перевірка результатів:');
     for (const area of areas) {
       const count = await propertyRepo.count({ where: { areaId: area.id } });
-      console.log(`   - ${area.nameEn}: ${count} об'єктів`);
+      console.log(`   - ${area.nameEn}: ${count} об\'єктів`);
     }
 
     // Загальна статистика
@@ -174,7 +174,7 @@ async function redistributePropertiesAreas() {
       .getRawOne();
 
     console.log(`\n📈 Загальна статистика:`);
-    console.log(`   - Всього об'єктів: ${allProperties.length}`);
+    console.log(`   - Всього об\'єктів: ${allProperties.length}`);
     console.log(`   - Унікальних areaId: ${totalUniqueAreas.count}`);
 
     await AppDataSource.destroy();
