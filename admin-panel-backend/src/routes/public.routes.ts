@@ -346,17 +346,107 @@ router.get('/areas', authenticateApiKeyWithSecret, async (req: AuthRequest, res)
 
     const { cityId } = req.query;
 
-    // Знаходимо всі areas
+    // Використовуємо query builder з явним вибором тільки основних полів
     const where: any = {};
     if (cityId) {
       where.cityId = cityId;
     }
-
-    const areas = await AppDataSource.getRepository(Area).find({
-      where,
-      relations: ['city', 'city.country'],
-      order: { nameEn: 'ASC' },
-    });
+    
+    // Використовуємо raw query для безпечного вибору (обходимо TypeORM entity mapping)
+    const queryRunner = AppDataSource.createQueryRunner();
+    await queryRunner.connect();
+    
+    let areas: any[] = [];
+    try {
+      let whereClause = '';
+      const whereParams: any[] = [];
+      if (cityId) {
+        whereClause = 'WHERE area."cityId" = $1';
+        whereParams.push(cityId);
+      }
+      
+      // Вибираємо тільки основні поля areas
+      const areasRaw = await queryRunner.query(`
+        SELECT 
+          area.id,
+          area."cityId",
+          area."nameEn",
+          area."nameRu",
+          area."nameAr"
+        FROM areas area
+        ${whereClause}
+        ORDER BY area."nameEn" ASC
+      `, whereParams);
+      
+      // Отримуємо повну інформацію про city та country через TypeORM
+      const areaIds = areasRaw.map((a: any) => a.id);
+      let areasWithRelations: any[] = [];
+      if (areaIds.length > 0) {
+        // Використовуємо raw query для city та country, щоб уникнути проблем з entity
+        const citiesData = await queryRunner.query(`
+          SELECT DISTINCT
+            city.id,
+            city."nameEn",
+            city."nameRu",
+            city."nameAr",
+            city."countryId"
+          FROM cities city
+          WHERE city.id IN (
+            SELECT DISTINCT "cityId" FROM areas WHERE id = ANY($1::uuid[])
+          )
+        `, [areaIds]);
+        
+        const countryIds = [...new Set(citiesData.map((c: any) => c.countryId))];
+        const countriesData = countryIds.length > 0 ? await queryRunner.query(`
+          SELECT 
+            country.id,
+            country."nameEn",
+            country."nameRu",
+            country."nameAr",
+            country.code
+          FROM countries country
+          WHERE country.id = ANY($1::uuid[])
+        `, [countryIds]) : [];
+        
+        // Формуємо структуру areas з relations
+        const citiesMap = new Map(citiesData.map((c: any) => [c.id, c]));
+        const countriesMap = new Map(countriesData.map((c: any) => [c.id, c]));
+        
+        areas = areasRaw.map((areaRaw: any) => {
+          const city: any = citiesMap.get(areaRaw.cityId);
+          const country: any = city ? countriesMap.get(city.countryId) : null;
+          
+          return {
+            id: areaRaw.id,
+            cityId: areaRaw.cityId,
+            nameEn: areaRaw.nameEn,
+            nameRu: areaRaw.nameRu,
+            nameAr: areaRaw.nameAr,
+            city: city ? {
+              id: city.id,
+              nameEn: city.nameEn,
+              nameRu: city.nameRu,
+              nameAr: city.nameAr,
+              countryId: city.countryId,
+              country: country ? {
+                id: country.id,
+                nameEn: country.nameEn,
+                nameRu: country.nameRu,
+                nameAr: country.nameAr,
+                code: country.code,
+              } : null,
+            } : null,
+            description: null,
+            infrastructure: null,
+            images: null,
+          };
+        });
+      } else {
+        areas = [];
+      }
+    } finally {
+      await queryRunner.release();
+    }
 
     // Отримуємо підрахунок properties по areas через SQL агрегацію (більш ефективно)
     const areaIds = areas.map(a => a.id);
@@ -440,9 +530,9 @@ router.get('/areas', authenticateApiKeyWithSecret, async (req: AuthRequest, res)
           offPlan: counts.offPlan,
           secondary: counts.secondary,
         },
-        description: area.description,
-        infrastructure: area.infrastructure,
-        images: area.images,
+        description: (area as any).description || null,
+        infrastructure: (area as any).infrastructure || null,
+        images: (area as any).images || null,
       };
     });
 
