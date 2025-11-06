@@ -365,18 +365,21 @@ router.get('/areas', authenticateApiKeyWithSecret, async (req: AuthRequest, res)
         whereParams.push(cityId);
       }
       
-      // Вибираємо тільки основні поля areas
-      const areasRaw = await queryRunner.query(`
-        SELECT 
-          area.id,
-          area."cityId",
-          area."nameEn",
-          area."nameRu",
-          area."nameAr"
-        FROM areas area
-        ${whereClause}
-        ORDER BY area."nameEn" ASC
-      `, whereParams);
+          // Вибираємо всі поля areas, включаючи description, infrastructure, images
+          const areasRaw = await queryRunner.query(`
+            SELECT 
+              area.id,
+              area."cityId",
+              area."nameEn",
+              area."nameRu",
+              area."nameAr",
+              area.description,
+              area.infrastructure,
+              area.images
+            FROM areas area
+            ${whereClause}
+            ORDER BY area."nameEn" ASC
+          `, whereParams);
       
       // Отримуємо повну інформацію про city та country через TypeORM
       const areaIds = areasRaw.map((a: any) => a.id);
@@ -436,9 +439,9 @@ router.get('/areas', authenticateApiKeyWithSecret, async (req: AuthRequest, res)
                 code: country.code,
               } : null,
             } : null,
-            description: null,
-            infrastructure: null,
-            images: null,
+            description: areaRaw.description || null,
+            infrastructure: areaRaw.infrastructure || null,
+            images: areaRaw.images || null,
           };
         });
       } else {
