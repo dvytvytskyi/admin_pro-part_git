@@ -990,8 +990,9 @@ function DevelopersTab({ developers, onReload }: any) {
                     alt="Developer logo"
                     className="h-20 w-20 object-contain rounded-lg border border-gray-200 dark:border-gray-700"
                     onError={(e) => {
+                      const img = e.target as HTMLImageElement;
                       console.error('Logo load error:', developerLogo);
-                      (e.target as HTMLImageElement).style.display = 'none';
+                      img.style.display = 'none';
                     }}
                     onLoad={() => {
                       console.log('Logo loaded successfully:', developerLogo)
