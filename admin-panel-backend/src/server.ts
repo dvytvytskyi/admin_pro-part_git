@@ -26,6 +26,15 @@ const app = express();
 const PORT = process.env.PORT || 4000;
 
 // Middleware
+// CORS для публічних ендпоінтів (дозволяє всі джерела, оскільки захищено через API key)
+app.use('/api/public', cors({
+  origin: '*', // Дозволяємо всі джерела для публічних API
+  methods: ['GET', 'OPTIONS'],
+  allowedHeaders: ['x-api-key', 'x-api-secret', 'Content-Type', 'Authorization'],
+  credentials: false,
+}));
+
+// CORS для інших ендпоінтів
 app.use(cors());
 app.use(express.json());
 app.use('/uploads', express.static('uploads'));
