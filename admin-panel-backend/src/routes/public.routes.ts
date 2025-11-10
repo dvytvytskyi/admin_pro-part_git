@@ -7,6 +7,7 @@ import { Area } from '../entities/Area';
 import { Developer } from '../entities/Developer';
 import { Facility } from '../entities/Facility';
 import { Course } from '../entities/Course';
+import { News } from '../entities/News';
 import { successResponse, errorResponse } from '../utils/response';
 import { Conversions } from '../utils/conversions';
 import { authenticateApiKeyWithSecret, AuthRequest } from '../middleware/auth';
@@ -665,6 +666,165 @@ router.get('/developers', authenticateApiKeyWithSecret, async (req: AuthRequest,
   } catch (error: any) {
     console.error('Error fetching developers:', error);
     res.status(500).json(errorResponse('Failed to fetch developers', error.message));
+  }
+});
+
+// Helper function to generate slug from title
+function generateSlug(title: string): string {
+  return title
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '') // Remove special characters
+    .replace(/[\s_-]+/g, '-') // Replace spaces and underscores with hyphens
+    .replace(/^-+|-+$/g, ''); // Remove leading/trailing hyphens
+}
+
+// GET /api/public/news - Get all published news with pagination
+router.get('/news', authenticateApiKeyWithSecret, async (req: AuthRequest, res) => {
+  try {
+    console.log('[Public API] GET /api/public/news request:', {
+      hasApiKey: !!req.apiKey,
+      apiKeyName: req.apiKey?.name,
+      page: req.query.page,
+      limit: req.query.limit,
+    });
+
+    // Пагінація
+    const pageNum = req.query.page ? parseInt(req.query.page.toString(), 10) : 1;
+    const limitNum = req.query.limit ? parseInt(req.query.limit.toString(), 10) : 20;
+    const MAX_LIMIT = 100;
+    const finalLimit = Math.min(Math.max(limitNum, 1), MAX_LIMIT);
+    const skip = (pageNum - 1) * finalLimit;
+
+    // Створюємо query builder для опублікованих новин
+    const queryBuilder = AppDataSource.getRepository(News)
+      .createQueryBuilder('news')
+      .where('news.isPublished = :isPublished', { isPublished: true })
+      .andWhere('news.publishedAt IS NOT NULL')
+      .andWhere('news.publishedAt <= :now', { now: new Date() });
+
+    // Отримуємо загальну кількість перед пагінацією
+    const totalCount = await queryBuilder.getCount();
+
+    // Застосовуємо пагінацію та сортування
+    const news = await queryBuilder
+      .orderBy('news.publishedAt', 'DESC')
+      .skip(skip)
+      .take(finalLimit)
+      .getMany();
+
+    // Формуємо відповідь
+    const newsList = news.map(item => ({
+      id: item.id,
+      slug: generateSlug(item.title), // Генеруємо slug з title
+      title: item.title,
+      titleRu: (item as any).titleRu || null, // Підтримка titleRu якщо є
+      description: item.description,
+      descriptionRu: (item as any).descriptionRu || null, // Підтримка descriptionRu якщо є
+      image: item.imageUrl || null,
+      publishedAt: item.publishedAt,
+    }));
+
+    console.log('[Public API] ✅ News response sent:', {
+      totalNews: totalCount,
+      returnedNews: newsList.length,
+      page: pageNum,
+      limit: finalLimit,
+    });
+
+    res.json(successResponse({
+      data: newsList,
+      total: totalCount,
+      page: pageNum,
+      limit: finalLimit,
+      totalPages: Math.ceil(totalCount / finalLimit),
+    }));
+  } catch (error: any) {
+    console.error('Error fetching news:', error);
+    res.status(500).json(errorResponse('Failed to fetch news', error.message));
+  }
+});
+
+// GET /api/public/news/:slug - Get single news item by slug
+router.get('/news/:slug', authenticateApiKeyWithSecret, async (req: AuthRequest, res) => {
+  try {
+    const { slug } = req.params;
+
+    console.log('[Public API] GET /api/public/news/:slug request:', {
+      hasApiKey: !!req.apiKey,
+      apiKeyName: req.apiKey?.name,
+      slug,
+    });
+
+    // Спочатку пробуємо знайти за id (якщо slug виглядає як UUID)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    let newsItem: News | null = null;
+
+    if (uuidRegex.test(slug)) {
+      // Якщо slug виглядає як UUID, шукаємо за id
+      newsItem = await AppDataSource.getRepository(News)
+        .createQueryBuilder('news')
+        .leftJoinAndSelect('news.contents', 'contents')
+        .where('news.id = :id', { id: slug })
+        .andWhere('news.isPublished = :isPublished', { isPublished: true })
+        .andWhere('news.publishedAt IS NOT NULL')
+        .andWhere('news.publishedAt <= :now', { now: new Date() })
+        .orderBy('contents.order', 'ASC')
+        .getOne();
+    }
+
+    // Якщо не знайдено за id, шукаємо за slug (якщо поле є в БД) або генеруємо slug з title
+    if (!newsItem) {
+      const allNews = await AppDataSource.getRepository(News)
+        .createQueryBuilder('news')
+        .leftJoinAndSelect('news.contents', 'contents')
+        .where('news.isPublished = :isPublished', { isPublished: true })
+        .andWhere('news.publishedAt IS NOT NULL')
+        .andWhere('news.publishedAt <= :now', { now: new Date() })
+        .orderBy('contents.order', 'ASC')
+        .getMany();
+
+      // Шукаємо за slug в БД або генеруємо slug з title
+      newsItem = allNews.find(item => {
+        const dbSlug = (item as any).slug;
+        const generatedSlug = generateSlug(item.title);
+        return dbSlug === slug || generatedSlug === slug;
+      }) || null;
+    }
+
+    if (!newsItem) {
+      return res.status(404).json(errorResponse('News not found'));
+    }
+
+    // Формуємо відповідь з повною інформацією
+    const newsResponse = {
+      id: newsItem.id,
+      slug: (newsItem as any).slug || generateSlug(newsItem.title),
+      title: newsItem.title,
+      titleRu: (newsItem as any).titleRu || null,
+      description: newsItem.description,
+      descriptionRu: (newsItem as any).descriptionRu || null,
+      image: newsItem.imageUrl || null,
+      publishedAt: newsItem.publishedAt,
+      contents: (newsItem.contents || []).sort((a, b) => a.order - b.order).map(content => ({
+        type: content.type,
+        title: content.title,
+        description: content.description || null,
+        imageUrl: content.imageUrl || null,
+        videoUrl: content.videoUrl || null,
+        order: content.order,
+      })),
+    };
+
+    console.log('[Public API] ✅ News detail response sent:', {
+      newsId: newsItem.id,
+      contentsCount: newsResponse.contents.length,
+    });
+
+    res.json(successResponse(newsResponse));
+  } catch (error: any) {
+    console.error('Error fetching news detail:', error);
+    res.status(500).json(errorResponse('Failed to fetch news detail', error.message));
   }
 });
 
