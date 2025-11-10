@@ -2,6 +2,7 @@ import 'reflect-metadata';
 import { AppDataSource } from '../config/database';
 import { Property, PropertyType } from '../entities/Property';
 import { PropertyUnit } from '../entities/PropertyUnit';
+import * as process from 'process';
 
 async function clearOffPlanProperties() {
   try {

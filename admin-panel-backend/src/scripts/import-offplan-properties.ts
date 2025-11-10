@@ -9,6 +9,7 @@ import { Developer } from '../entities/Developer';
 import { Facility } from '../entities/Facility';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as process from 'process';
 
 interface OffPlanPropertyData {
   id: string;
