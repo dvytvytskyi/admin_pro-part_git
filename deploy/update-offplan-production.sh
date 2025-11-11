@@ -31,8 +31,13 @@ fi
 # Крок 1: Завантажити all_properties.json на сервер
 echo "📤 Крок 1: Завантаження all_properties.json на сервер..."
 if [ -f "all_properties.json" ]; then
+    echo "   Завантаження файлу (це може зайняти хвилину, файл ~37MB)..."
     sshpass -p "${SERVER_PASSWORD}" scp -o StrictHostKeyChecking=no all_properties.json ${SERVER_USER}@${SERVER_IP}:${PROJECT_DIR}/all_properties.json
-    echo "✅ all_properties.json завантажено"
+    echo "✅ all_properties.json завантажено на сервер"
+    
+    # Також завантажуємо в директорію бекенду (для безпеки)
+    sshpass -p "${SERVER_PASSWORD}" scp -o StrictHostKeyChecking=no all_properties.json ${SERVER_USER}@${SERVER_IP}:${BACKEND_DIR}/all_properties.json
+    echo "✅ all_properties.json завантажено в директорію бекенду"
 else
     echo "❌ Файл all_properties.json не знайдено локально!"
     exit 1
