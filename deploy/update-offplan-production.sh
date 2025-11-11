@@ -84,31 +84,45 @@ sleep 15
 
 echo ""
 echo "📊 Крок 6: Перевірка статистики БД ДО оновлення..."
+# Спробуємо виконати через node dist/... (production)
 docker exec for-you-admin-panel-backend-prod node dist/scripts/count-properties.js 2>&1 | tail -10 || {
-    echo "⚠️  Не вдалося отримати статистику (можливо скрипт не скомпільований)"
-    echo "   Спробуємо скомпілювати..."
-    docker exec for-you-admin-panel-backend-prod npm run build || true
-    sleep 5
-    docker exec for-you-admin-panel-backend-prod node dist/scripts/count-properties.js 2>&1 | tail -10 || true
+    echo "⚠️  Скрипт не знайдено в dist/, перевіряємо чи скомпільовано..."
+    # Перевіряємо чи є dist директорія
+    docker exec for-you-admin-panel-backend-prod test -d dist || {
+        echo "   ❌ Директорія dist не існує. TypeScript не скомпільований."
+        echo "   Перебудовуємо контейнер..."
+        exit 1
+    }
+    echo "   ✅ Директорія dist існує, але скрипт не знайдено"
 }
 
 echo ""
 echo "🧹 Крок 7: Очищення СТАРИХ off-plan properties..."
 echo "⚠️  УВАГА: Видаляємо ТІЛЬКИ off-plan properties!"
-docker exec for-you-admin-panel-backend-prod node dist/scripts/clear-offplan-properties.js || {
+echo "   Secondary properties НЕ будуть зачіплені!"
+# Спочатку пробуємо через скрипт
+docker exec for-you-admin-panel-backend-prod node dist/scripts/clear-offplan-properties.js 2>&1 || {
     echo "⚠️  Скрипт clear-offplan-properties.js не знайдено, використовую SQL напряму..."
+    echo "   Виконую SQL: DELETE FROM properties WHERE propertyType = 'off-plan'"
     docker exec for-you-admin-panel-postgres-prod psql -U admin -d admin_panel -c "DELETE FROM properties WHERE \"propertyType\" = 'off-plan';" || {
         echo "❌ Помилка очищення off-plan properties"
         exit 1
     }
+    echo "   ✅ Off-plan properties видалено через SQL"
 }
 
 echo ""
 echo "📥 Крок 8: Імпорт НОВИХ off-plan properties з all_properties.json..."
-docker exec for-you-admin-panel-backend-prod node dist/scripts/import-all-properties.js || {
+echo "   Це може зайняти 5-10 хвилин..."
+docker exec for-you-admin-panel-backend-prod node dist/scripts/import-all-properties.js 2>&1 || {
     echo "❌ Помилка імпорту properties"
     echo "Перевіряємо логи..."
     docker logs for-you-admin-panel-backend-prod --tail 50
+    echo ""
+    echo "⚠️  Можливі причини:"
+    echo "   1. Файл all_properties.json не знайдено"
+    echo "   2. Помилка компіляції TypeScript"
+    echo "   3. Помилка підключення до БД"
     exit 1
 }
 
