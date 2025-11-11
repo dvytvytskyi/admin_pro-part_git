@@ -48,3 +48,12 @@ tmp/
 temp/
 .cache/
 
+# Import/Export data files
+all_properties.json
+exported-*.json
+import-errors.json
+*.json.backup
+
+# Script output files
+area-projects.md
+

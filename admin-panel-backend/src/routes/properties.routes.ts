@@ -237,11 +237,16 @@ router.get('/', async (req: AuthRequest, res) => {
 
     // Повертаємо формат з пагінацією
     // total - загальна кількість всіх properties з урахуванням фільтрів (НЕ кількість завантажених)
+    const totalPages = Math.ceil(totalCount / finalLimit);
+    
     res.json(successResponse({
       data: propertiesWithConversions,
-      total: totalCount, // Загальна кількість з урахуванням фільтрів
-      page: pageNum,
-      limit: finalLimit,
+      pagination: {
+        total: totalCount, // Загальна кількість з урахуванням фільтрів
+        page: pageNum,
+        limit: finalLimit,
+        totalPages: totalPages,
+      },
     }));
   } catch (error: any) {
     console.error('Error fetching properties:', error);

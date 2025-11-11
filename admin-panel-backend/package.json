@@ -39,7 +39,10 @@
     "count:properties": "ts-node-dev src/scripts/count-properties.ts",
     "test:developers-endpoint": "ts-node-dev src/scripts/test-developers-endpoint.ts",
     "clear:offplan": "ts-node-dev src/scripts/clear-offplan-properties.ts",
-    "import:offplan": "ts-node-dev src/scripts/import-offplan-properties.ts"
+    "import:offplan": "ts-node-dev src/scripts/import-offplan-properties.ts",
+    "import:all-properties": "ts-node-dev src/scripts/import-all-properties.ts",
+    "check:secondary-duplicates": "ts-node-dev src/scripts/check-secondary-duplicates.ts",
+    "remove:secondary-duplicates": "ts-node-dev src/scripts/remove-secondary-duplicates.ts"
   },
   "keywords": [],
   "author": "",

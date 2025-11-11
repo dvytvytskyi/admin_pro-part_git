@@ -73,6 +73,11 @@ export default function PropertiesPage() {
         setProperties(data.data)
         setTotalCount(data.data.length)
         setTotalPages(Math.ceil(data.data.length / itemsPerPage))
+      } else if (data.data && data.data.data && data.data.total !== undefined) {
+        // Формат з data.data.data та data.data.total (старий формат бекенду)
+        setProperties(data.data.data)
+        setTotalCount(data.data.total)
+        setTotalPages(Math.ceil(data.data.total / (data.data.limit || itemsPerPage)))
       } else {
         // Помилка або порожня відповідь
         console.error('Unexpected response format:', data)
