@@ -66,17 +66,34 @@ docker-compose -f docker-compose.prod.yml build admin-panel-backend || {
 }
 
 echo ""
+echo "🛑 Крок 4: Зупинка старого контейнера..."
+docker-compose -f docker-compose.prod.yml stop admin-panel-backend 2>/dev/null || true
+docker rm -f for-you-admin-panel-backend-prod 2>/dev/null || true
+
+echo ""
+echo "🔄 Крок 5: Запуск нового контейнера..."
+docker-compose -f docker-compose.prod.yml up -d --force-recreate --no-deps admin-panel-backend || {
+    echo "❌ Помилка запуску бекенду"
+    exit 1
+}
+
+echo ""
 echo "⏳ Очікування запуску контейнера (15 секунд)..."
 sleep 15
 
 echo ""
-echo "📁 Крок 4: Копіювання all_properties.json в контейнер..."
-# Чекаємо, поки контейнер запуститься
-for i in {1..10}; do
+echo "📁 Крок 6: Копіювання all_properties.json в контейнер..."
+# Чекаємо, поки контейнер повністю запуститься
+for i in {1..15}; do
     if docker exec for-you-admin-panel-backend-prod test -d /app 2>/dev/null; then
+        echo "   ✅ Контейнер готовий"
         break
     fi
-    echo "   Очікування запуску контейнера... ($i/10)"
+    if [ $i -eq 15 ]; then
+        echo "   ❌ Контейнер не запустився"
+        exit 1
+    fi
+    echo "   Очікування запуску контейнера... ($i/15)"
     sleep 2
 done
 
@@ -94,19 +111,7 @@ docker exec for-you-admin-panel-backend-prod test -f /app/all_properties.json &&
 }
 
 echo ""
-echo "🛑 Крок 3.1: Зупинка старого контейнера..."
-docker-compose -f docker-compose.prod.yml stop admin-panel-backend 2>/dev/null || true
-docker rm -f for-you-admin-panel-backend-prod 2>/dev/null || true
-
-echo ""
-echo "🔄 Крок 3.2: Запуск нового контейнера..."
-docker-compose -f docker-compose.prod.yml up -d --force-recreate --no-deps admin-panel-backend || {
-    echo "❌ Помилка запуску бекенду"
-    exit 1
-}
-
-echo ""
-echo "📊 Крок 5: Перевірка статистики БД ДО оновлення..."
+echo "📊 Крок 7: Перевірка статистики БД ДО оновлення..."
 # Спробуємо виконати через node dist/... (production)
 docker exec for-you-admin-panel-backend-prod node dist/scripts/count-properties.js 2>&1 | tail -10 || {
     echo "⚠️  Скрипт не знайдено в dist/, перевіряємо чи скомпільовано..."
@@ -120,7 +125,7 @@ docker exec for-you-admin-panel-backend-prod node dist/scripts/count-properties.
 }
 
 echo ""
-echo "🧹 Крок 6: Очищення СТАРИХ off-plan properties..."
+echo "🧹 Крок 8: Очищення СТАРИХ off-plan properties..."
 echo "⚠️  УВАГА: Видаляємо ТІЛЬКИ off-plan properties!"
 echo "   Secondary properties НЕ будуть зачіплені!"
 # Спочатку пробуємо через скрипт
@@ -135,7 +140,7 @@ docker exec for-you-admin-panel-backend-prod node dist/scripts/clear-offplan-pro
 }
 
 echo ""
-echo "📥 Крок 7: Імпорт НОВИХ off-plan properties з all_properties.json..."
+echo "📥 Крок 9: Імпорт НОВИХ off-plan properties з all_properties.json..."
 echo "   Це може зайняти 5-10 хвилин..."
 docker exec for-you-admin-panel-backend-prod node dist/scripts/import-all-properties.js 2>&1 || {
     echo "❌ Помилка імпорту properties"
@@ -150,11 +155,11 @@ docker exec for-you-admin-panel-backend-prod node dist/scripts/import-all-proper
 }
 
 echo ""
-echo "📊 Крок 8: Перевірка статистики БД ПІСЛЯ оновлення..."
+echo "📊 Крок 10: Перевірка статистики БД ПІСЛЯ оновлення..."
 docker exec for-you-admin-panel-backend-prod node dist/scripts/count-properties.js 2>&1 | tail -10 || true
 
 echo ""
-echo "🔄 Крок 9: Перезапуск бекенду для застосування змін..."
+echo "🔄 Крок 11: Перезапуск бекенду для застосування змін..."
 docker-compose -f docker-compose.prod.yml restart admin-panel-backend
 
 echo ""
