@@ -131,23 +131,38 @@ function validateAndCleanUrl(url: string): string | null {
       }
     }
     
-    // Final validation: check if it's a valid Cloudinary URL
+    // Final validation: accept valid HTTP/HTTPS URLs
+    // Accept Cloudinary URLs
     if (cleaned.includes('res.cloudinary.com')) {
       // Cloudinary URL should have format: https://res.cloudinary.com/{cloud_name}/{resource_type}/upload/{version}/{folder}/{filename}
       // But be lenient - accept URLs even without file extension if they have valid structure
       if (!/^https:\/\/res\.cloudinary\.com\/[^\/]+\/[^\/]+\/upload/.test(cleaned)) {
         return null;
       }
-      // If URL doesn't have file extension, it might be incomplete but still valid for some cases
-      // We'll accept it if it has at least the basic Cloudinary structure
+    }
+    // Also accept files.alnair.ae URLs (legacy file storage)
+    else if (cleaned.includes('files.alnair.ae')) {
+      // Accept files.alnair.ae URLs if they have valid structure
+      if (!/^https:\/\/files\.alnair\.ae\/[^\s"']+/.test(cleaned)) {
+        return null;
+      }
+    }
+    // Accept any other valid HTTPS URLs that pass URL validation
+    else if (urlObj.protocol === 'https:' && urlObj.hostname) {
+      // Accept any valid HTTPS URL
+      return cleaned;
+    }
+    // Reject HTTP URLs (should use HTTPS)
+    else if (urlObj.protocol === 'http:') {
+      return null;
     }
     
     return cleaned;
   } catch (e) {
     // URL parsing failed - try to extract valid part
     // Check if it looks like a valid URL even if parsing failed
-    if (cleaned.match(/^https:\/\/res\.cloudinary\.com\/[^\/]+\/[^\/]+\/upload/)) {
-      // Looks like valid Cloudinary URL structure, return it
+    if (cleaned.match(/^https:\/\/(res\.cloudinary\.com|files\.alnair\.ae)\/[^\s"']+/)) {
+      // Looks like valid URL structure, return it
       return cleaned;
     }
     return null;
