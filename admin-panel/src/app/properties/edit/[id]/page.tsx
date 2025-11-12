@@ -285,7 +285,7 @@ export default function EditPropertyPage() {
           if (typeof photo === 'string') return photo;
           if (typeof photo === 'object' && photo !== null && photo.url) return String(photo.url);
           return null;
-        }).filter((photo): photo is string => photo !== null),
+        }).filter((photo: string | null): photo is string => photo !== null),
         countryId: property.countryId || '',
         cityId: property.cityId || '',
         areaId: property.areaId || '',
