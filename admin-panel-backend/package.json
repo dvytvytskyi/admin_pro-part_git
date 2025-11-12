@@ -7,8 +7,8 @@
     "dev": "ts-node-dev --respawn src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "migration:generate": "typeorm-ts-node-esm migration:generate",
-    "migration:run": "typeorm-ts-node-esm migration:run",
+    "migration:generate": "typeorm-ts-node-esm migration:generate -d src/config/database.ts",
+    "migration:run": "ts-node-dev src/scripts/run-migrations.ts",
     "seed": "ts-node-dev src/seeds/seed.ts",
     "import:properties": "ts-node-dev src/scripts/importProperties.ts",
     "create:api-keys-table": "ts-node-dev src/scripts/createApiKeysTable.ts",
@@ -49,7 +49,9 @@
     "count:areas-from-json": "ts-node-dev src/scripts/count-areas-from-json.ts",
     "list:areas-simple": "ts-node-dev src/scripts/simple-list-areas.ts",
     "cleanup:areas": "ts-node-dev src/scripts/cleanup-unused-areas.ts",
-    "check:no-coordinates": "ts-node-dev src/scripts/check-properties-without-coordinates.ts"
+    "check:no-coordinates": "ts-node-dev src/scripts/check-properties-without-coordinates.ts",
+    "import:exported-offplan": "ts-node-dev src/scripts/import-exported-offplan-data.ts",
+    "optimize:facilities": "ts-node-dev src/scripts/optimize-facilities.ts"
   },
   "keywords": [],
   "author": "",

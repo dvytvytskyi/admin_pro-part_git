@@ -50,7 +50,7 @@ services:
       context: ./admin-panel
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: https://admin.foryou-realestate.com/api
+        NEXT_PUBLIC_API_URL: https://admin.pro-part.online/api
     container_name: for-you-admin-panel-frontend-prod
     restart: unless-stopped
     ports:

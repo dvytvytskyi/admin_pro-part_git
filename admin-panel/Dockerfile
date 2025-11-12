@@ -14,7 +14,7 @@ COPY . .
 
 # Додаємо мінімальні env змінні для build
 # NEXT_PUBLIC_API_URL передається через build arg або .env.production
-ARG NEXT_PUBLIC_API_URL=https://admin.foryou-realestate.com/api
+ARG NEXT_PUBLIC_API_URL=https://admin.pro-part.online/api
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 ENV NEXT_TELEMETRY_DISABLED=1
 

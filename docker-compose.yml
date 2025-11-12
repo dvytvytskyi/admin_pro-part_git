@@ -2,20 +2,20 @@
 services:
   postgres:
     image: postgis/postgis:15-3.3
-    container_name: for-you-real-estate-postgres
+    container_name: admin-pro-part-postgis
     restart: unless-stopped
     ports:
       - '5432:5432'
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: for_you_real_estate
+      POSTGRES_DB: admin_pro_part_db
       PGDATA: /var/lib/postgresql/data
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - admin_pro_part_postgis_data:/var/lib/postgresql/data
       - ./backend/database/init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
-      - for-you-network
+      - admin-pro-part-network
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U postgres']
       interval: 10s
@@ -24,18 +24,18 @@ services:
 
   admin-panel-db:
     image: postgres:15
-    container_name: for-you-admin-panel-postgres-new
+    container_name: admin-pro-part-postgres
     restart: unless-stopped
     ports:
-      - '5435:5432'
+      - '5436:5432'
     environment:
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: admin123
       POSTGRES_DB: admin_panel
     volumes:
-      - admin_panel_db_data:/var/lib/postgresql/data
+      - admin_pro_part_db_data:/var/lib/postgresql/data
     networks:
-      - for-you-network
+      - admin-pro-part-network
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U admin']
       interval: 10s
@@ -44,15 +44,15 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: for-you-real-estate-redis
+    container_name: admin-pro-part-redis
     restart: unless-stopped
     ports:
-      - '6379:6379'
+      - '6380:6379'
     command: redis-server --appendonly yes
     volumes:
-      - redis_data:/data
+      - admin_pro_part_redis_data:/data
     networks:
-      - for-you-network
+      - admin-pro-part-network
     healthcheck:
       test: ['CMD', 'redis-cli', 'ping']
       interval: 10s
@@ -86,14 +86,14 @@ services:
   #     - for-you-network
 
 volumes:
-  postgres_data:
+  admin_pro_part_postgis_data:
     driver: local
-  redis_data:
+  admin_pro_part_redis_data:
     driver: local
-  admin_panel_db_data:
+  admin_pro_part_db_data:
     driver: local
 
 networks:
-  for-you-network:
+  admin-pro-part-network:
     driver: bridge
 

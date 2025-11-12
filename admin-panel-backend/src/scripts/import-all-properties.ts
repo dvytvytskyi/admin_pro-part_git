@@ -296,8 +296,8 @@ function extractBedrooms(
         }
       }
       // Also try bedroom_type if available
-      if (block && block.bedroom_type) {
-        const match = String(block.bedroom_type).match(/(\d+)/);
+      if (block && (block as any).bedroom_type) {
+        const match = String((block as any).bedroom_type).match(/(\d+)/);
         if (match) {
           bedrooms.push(parseInt(match[1]));
         }
@@ -322,7 +322,7 @@ function extractBedrooms(
   }
 
   // Try 3: Search in description or other text fields
-  const description = details?.overview || basicInfo?.description || '';
+  const description = details?.overview || (basicInfo as any)?.description || '';
   const descMatch = description.match(/(\d+)\s*(?:bedroom|bed)/i);
   if (descMatch) {
     bedrooms.push(parseInt(descMatch[1]));
@@ -367,14 +367,14 @@ function extractSize(
   }
 
   // Try 2: Extract from details.min_area / max_area (in sqft, convert to m²)
-  if (details?.min_area) {
-    const size = parseFloat(String(details.min_area));
+  if ((details as any)?.min_area) {
+    const size = parseFloat(String((details as any).min_area));
     if (!isNaN(size) && size > 0) {
       sizes.push(size / 10.764); // sqft to m²
     }
   }
-  if (details?.max_area) {
-    const size = parseFloat(String(details.max_area));
+  if ((details as any)?.max_area) {
+    const size = parseFloat(String((details as any).max_area));
     if (!isNaN(size) && size > 0) {
       sizes.push(size / 10.764); // sqft to m²
     }
@@ -391,8 +391,8 @@ function extractSize(
               sizes.push(size / 10.764); // sqft to m²
             }
           }
-          if (unit.area_to) {
-            const size = parseFloat(String(unit.area_to));
+          if ((unit as any).area_to) {
+            const size = parseFloat(String((unit as any).area_to));
             if (!isNaN(size) && size > 0) {
               sizes.push(size / 10.764); // sqft to m²
             }
@@ -403,14 +403,14 @@ function extractSize(
   }
 
   // Try 4: Extract from basicInfo if available
-  if (basicInfo?.min_area) {
-    const size = parseFloat(String(basicInfo.min_area));
+  if ((basicInfo as any)?.min_area) {
+    const size = parseFloat(String((basicInfo as any).min_area));
     if (!isNaN(size) && size > 0) {
       sizes.push(size / 10.764); // sqft to m²
     }
   }
-  if (basicInfo?.max_area) {
-    const size = parseFloat(String(basicInfo.max_area));
+  if ((basicInfo as any)?.max_area) {
+    const size = parseFloat(String((basicInfo as any).max_area));
     if (!isNaN(size) && size > 0) {
       sizes.push(size / 10.764); // sqft to m²
     }
