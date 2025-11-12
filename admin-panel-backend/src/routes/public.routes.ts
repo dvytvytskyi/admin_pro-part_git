@@ -1,6 +1,6 @@
 import express from 'express';
 import { AppDataSource } from '../config/database';
-import { Property } from '../entities/Property';
+import { Property, PropertyType } from '../entities/Property';
 import { Country } from '../entities/Country';
 import { City } from '../entities/City';
 import { Area } from '../entities/Area';
@@ -136,28 +136,29 @@ function validateAndCleanUrl(url: string): string | null {
     }
     
     // Final validation: accept valid HTTP/HTTPS URLs
-    // Accept Cloudinary URLs
+    // Accept Cloudinary URLs with strict validation
     if (cleaned.includes('res.cloudinary.com')) {
       // Cloudinary URL should have format: https://res.cloudinary.com/{cloud_name}/{resource_type}/upload/{version}/{folder}/{filename}
       // But be lenient - accept URLs even without file extension if they have valid structure
       if (!/^https:\/\/res\.cloudinary\.com\/[^\/]+\/[^\/]+\/upload/.test(cleaned)) {
         return null;
       }
-    }
-    // Also accept files.alnair.ae URLs (legacy file storage)
-    else if (cleaned.includes('files.alnair.ae')) {
-      // Accept files.alnair.ae URLs if they have valid structure
-      if (!/^https:\/\/files\.alnair\.ae\/[^\s"']+/.test(cleaned)) {
-        return null;
-      }
-    }
-    // Accept any other valid HTTPS URLs that pass URL validation
-    else if (urlObj.protocol === 'https:' && urlObj.hostname) {
-      // Accept any valid HTTPS URL
       return cleaned;
     }
+    
+    // For all other HTTPS URLs (including api.reelly.io, xano.io, files.alnair.ae, etc.)
+    // Accept any valid HTTPS URL that passed URL validation
+    if (urlObj.protocol === 'https:' && urlObj.hostname) {
+      // Accept any valid HTTPS URL - this includes:
+      // - api.reelly.io (property photos)
+      // - xano.io (property photos)
+      // - files.alnair.ae (legacy storage)
+      // - Any other valid HTTPS URL
+      return cleaned;
+    }
+    
     // Reject HTTP URLs (should use HTTPS)
-    else if (urlObj.protocol === 'http:') {
+    if (urlObj.protocol === 'http:') {
       return null;
     }
     
@@ -165,7 +166,7 @@ function validateAndCleanUrl(url: string): string | null {
   } catch (e) {
     // URL parsing failed - try to extract valid part
     // Check if it looks like a valid URL even if parsing failed
-    if (cleaned.match(/^https:\/\/(res\.cloudinary\.com|files\.alnair\.ae)\/[^\s"']+/)) {
+    if (cleaned.match(/^https:\/\/(res\.cloudinary\.com|files\.alnair\.ae|api\.reelly\.io|[^\s"']*xano\.io)\/[^\s"']+/)) {
       // Looks like valid URL structure, return it
       return cleaned;
     }
@@ -182,28 +183,62 @@ function parseImages(images: any): string[] | null {
   if (Array.isArray(images)) {
     const parsed = images
       .map(img => {
-        // Handle both string URLs and objects
-        let urlToValidate: string | null = null;
+        // Skip null/undefined
+        if (img === null || img === undefined) return null;
+        
+        // Handle string URLs
         if (typeof img === 'string') {
-          urlToValidate = img;
-        } else if (typeof img === 'object' && img !== null && img.url) {
-          urlToValidate = String(img.url);
-        } else if (img !== null && img !== undefined) {
-          urlToValidate = String(img);
-        }
-        
-        if (!urlToValidate) return null;
-        
-        const cleaned = validateAndCleanUrl(urlToValidate);
-        if (!cleaned && urlToValidate) {
-          // Log invalid URLs for debugging (only in development)
-          if (process.env.NODE_ENV === 'development') {
-            console.warn(`[parseImages] Invalid URL filtered out: ${urlToValidate.substring(0, 100)}...`);
+          const trimmed = img.trim();
+          // Skip empty strings or strings that are just "{}"
+          if (trimmed.length === 0 || trimmed === '{}' || trimmed === '[object Object]') {
+            return null;
           }
+          return validateAndCleanUrl(trimmed);
         }
-        return cleaned;
+        
+        // Handle objects
+        if (typeof img === 'object') {
+          // Skip empty objects {}
+          if (Object.keys(img).length === 0) {
+            return null;
+          }
+          
+          // Try to extract URL from object
+          if (img.url && typeof img.url === 'string') {
+            const trimmed = img.url.trim();
+            if (trimmed.length === 0 || trimmed === '{}') {
+              return null;
+            }
+            return validateAndCleanUrl(trimmed);
+          }
+          
+          // Try to extract URL from src property
+          if (img.src && typeof img.src === 'string') {
+            const trimmed = img.src.trim();
+            if (trimmed.length === 0 || trimmed === '{}') {
+              return null;
+            }
+            return validateAndCleanUrl(trimmed);
+          }
+          
+          // If object doesn't have url or src, skip it
+          return null;
+        }
+        
+        // For other types (numbers, etc.), try to convert to string
+        const str = String(img).trim();
+        if (str === '{}' || str === '[object Object]' || str.length === 0) {
+          return null;
+        }
+        
+        // Only accept if it looks like a URL
+        if (str.startsWith('http://') || str.startsWith('https://')) {
+          return validateAndCleanUrl(str);
+        }
+        
+        return null;
       })
-      .filter((url): url is string => url !== null);
+      .filter((url): url is string => url !== null && url.length > 0);
     return parsed.length > 0 ? parsed : null;
   }
   
@@ -1064,6 +1099,203 @@ router.get('/news/:slug', authenticateApiKeyWithSecret, async (req: AuthRequest,
   } catch (error: any) {
     console.error('Error fetching news detail:', error);
     res.status(500).json(errorResponse('Failed to fetch news detail', error.message));
+  }
+});
+
+// GET /api/public/properties - Public properties endpoint (NO authentication required)
+router.get('/properties', async (req, res) => {
+  try {
+    console.log('[Public API] GET /api/public/properties request:', {
+      query: req.query,
+      propertyType: req.query.propertyType,
+    });
+
+    const { 
+      propertyType, 
+      developerId, 
+      cityId, 
+      areaId,
+      bedrooms,
+      sizeFrom,
+      sizeTo,
+      priceFrom,
+      priceTo,
+      search,
+      sortBy,
+      sortOrder,
+      page,
+      limit
+    } = req.query;
+    
+    const where: any = {};
+    
+    // Базові фільтри
+    if (propertyType) where.propertyType = propertyType;
+    if (developerId) where.developerId = developerId;
+    if (cityId) where.cityId = cityId;
+    if (areaId) where.areaId = areaId;
+
+    // Перевірка чи підключено до БД
+    if (!AppDataSource.isInitialized) {
+      console.error('Database not initialized');
+      return res.status(500).json({
+        success: false,
+        message: 'Database connection not initialized',
+      });
+    }
+
+    // Базовий query builder для гнучкої фільтрації
+    const queryBuilder = AppDataSource.getRepository(Property)
+      .createQueryBuilder('property')
+      .leftJoinAndSelect('property.country', 'country')
+      .leftJoinAndSelect('property.city', 'city')
+      .leftJoinAndSelect('property.area', 'area')
+      .leftJoinAndSelect('property.developer', 'developer')
+      .leftJoinAndSelect('property.facilities', 'facilities')
+      .leftJoinAndSelect('property.units', 'units');
+
+    // Застосовуємо базові фільтри
+    Object.keys(where).forEach(key => {
+      queryBuilder.andWhere(`property.${key} = :${key}`, { [key]: where[key] });
+    });
+
+    // Фільтр по кількості спалень
+    if (bedrooms) {
+      const bedroomsArray: string[] = Array.isArray(bedrooms) 
+        ? bedrooms.map(b => String(b))
+        : String(bedrooms).split(',');
+      
+      const bedroomsConditions = bedroomsArray.map((bed: string, index: number) => {
+        const bedNum = parseInt(bed.trim(), 10);
+        if (isNaN(bedNum)) return null;
+        
+        return `(
+          (property.propertyType = 'off-plan' AND property.bedroomsFrom <= :bed${index} AND property.bedroomsTo >= :bed${index})
+          OR
+          (property.propertyType = 'secondary' AND property.bedrooms = :bed${index})
+        )`;
+      }).filter((item): item is string => item !== null);
+      
+      if (bedroomsConditions.length > 0) {
+        queryBuilder.andWhere(`(${bedroomsConditions.join(' OR ')})`);
+        bedroomsArray.forEach((bed: string, index: number) => {
+          const bedNum = parseInt(bed.trim(), 10);
+          if (!isNaN(bedNum)) {
+            queryBuilder.setParameter(`bed${index}`, bedNum);
+          }
+        });
+      }
+    }
+
+    // Фільтр по розміру
+    if (sizeFrom) {
+      const sizeFromNum = parseFloat(sizeFrom.toString());
+      if (!isNaN(sizeFromNum)) {
+        queryBuilder.andWhere(
+          `(property.sizeFrom >= :sizeFrom OR property.size >= :sizeFrom)`,
+          { sizeFrom: sizeFromNum }
+        );
+      }
+    }
+    if (sizeTo) {
+      const sizeToNum = parseFloat(sizeTo.toString());
+      if (!isNaN(sizeToNum)) {
+        queryBuilder.andWhere(
+          `(property.sizeFrom <= :sizeTo OR property.size <= :sizeTo)`,
+          { sizeTo: sizeToNum }
+        );
+      }
+    }
+
+    // Фільтр по ціні
+    if (priceFrom) {
+      const priceFromNum = parseFloat(priceFrom.toString());
+      if (!isNaN(priceFromNum)) {
+        queryBuilder.andWhere(
+          `(property.priceFrom >= :priceFrom OR property.price >= :priceFrom)`,
+          { priceFrom: priceFromNum }
+        );
+      }
+    }
+    if (priceTo) {
+      const priceToNum = parseFloat(priceTo.toString());
+      if (!isNaN(priceToNum)) {
+        queryBuilder.andWhere(
+          `(property.priceFrom <= :priceTo OR property.price <= :priceTo)`,
+          { priceTo: priceToNum }
+        );
+      }
+    }
+
+    // Текстовий пошук
+    if (search) {
+      const searchTerm = `%${search.toString().toLowerCase()}%`;
+      queryBuilder.andWhere(
+        `(LOWER(property.name) LIKE :search OR LOWER(property.description) LIKE :search)`,
+        { search: searchTerm }
+      );
+    }
+
+    // Сортування
+    const sortField = sortBy?.toString() || 'createdAt';
+    const sortDirection = sortOrder?.toString().toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+    
+    const allowedSortFields = ['createdAt', 'name', 'price', 'priceFrom', 'size', 'sizeFrom'];
+    if (allowedSortFields.includes(sortField)) {
+      queryBuilder.orderBy(`property.${sortField}`, sortDirection);
+    } else {
+      queryBuilder.orderBy('property.createdAt', 'DESC');
+    }
+
+    // Пагінація
+    const pageNum = page ? parseInt(page.toString(), 10) : 1;
+    const limitNum = limit ? parseInt(limit.toString(), 10) : 20;
+    const MAX_LIMIT = 100;
+    const finalLimit = Math.min(limitNum, MAX_LIMIT);
+    const skip = (pageNum - 1) * finalLimit;
+
+    const totalCount = await queryBuilder.getCount();
+    queryBuilder.skip(skip).take(finalLimit);
+    const properties = await queryBuilder.getMany();
+
+    const propertiesWithConversions = properties.map(p => {
+      let areaField: any = p.area;
+      if (p.area && p.propertyType === 'off-plan') {
+        const areaName = p.area.nameEn || '';
+        const cityName = p.city?.nameEn || '';
+        areaField = cityName ? `${areaName}, ${cityName}` : areaName;
+      }
+
+      return {
+        ...p,
+        photos: p.photos || [],
+        area: areaField,
+        priceFromAED: p.priceFrom ? Conversions.usdToAed(p.priceFrom) : null,
+        priceAED: p.price ? Conversions.usdToAed(p.price) : null,
+        sizeFromSqft: p.sizeFrom ? Conversions.sqmToSqft(p.sizeFrom) : null,
+        sizeToSqft: p.sizeTo ? Conversions.sqmToSqft(p.sizeTo) : null,
+        sizeSqft: p.size ? Conversions.sqmToSqft(p.size) : null,
+      };
+    });
+
+    const totalPages = Math.ceil(totalCount / finalLimit);
+    
+    res.json(successResponse({
+      data: propertiesWithConversions,
+      pagination: {
+        total: totalCount,
+        page: pageNum,
+        limit: finalLimit,
+        totalPages: totalPages,
+      },
+    }));
+  } catch (error: any) {
+    console.error('Error fetching public properties:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to fetch properties',
+      error: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+    });
   }
 });
 
