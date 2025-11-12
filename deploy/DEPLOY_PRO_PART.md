@@ -162,7 +162,7 @@ volumes:
 ### Крок 5: Налаштування Nginx
 
 ```bash
-nano /etc/nginx/sites-available/app.pro-part.online
+nano /etc/nginx/sites-available/system.pro-part.online
 ```
 
 ```nginx
@@ -209,7 +209,7 @@ server {
 Активуйте конфігурацію:
 
 ```bash
-ln -s /etc/nginx/sites-available/app.pro-part.online /etc/nginx/sites-enabled/
+ln -s /etc/nginx/sites-available/system.pro-part.online /etc/nginx/sites-enabled/
 nginx -t
 systemctl reload nginx
 ```
