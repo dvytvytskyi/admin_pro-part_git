@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Скрипт для деплою admin_pro-part на app.pro-part.online
+# Скрипт для деплою admin_pro-part на system.pro-part.online
 # Сервер: 135.181.201.185
 
 set -e
