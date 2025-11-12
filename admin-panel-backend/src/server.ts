@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { AppDataSource } from './config/database';
+import { entities } from './entities';
 
 // Routes
 import authRoutes from './routes/auth.routes';
@@ -79,10 +80,15 @@ app.get('/health', (req, res) => {
 });
 
 // Initialize database and start server
+console.log('🔄 Initializing database connection...');
+console.log('📋 DATABASE_URL:', process.env.DATABASE_URL ? 'Set (hidden)' : 'NOT SET!');
+console.log('📊 Entities count:', entities.length);
+
 AppDataSource.initialize()
   .then(() => {
     console.log('✅ Database connected');
-    console.log('📊 Database entities loaded');
+    console.log('📊 Database entities loaded:', AppDataSource.entityMetadatas.length);
+    console.log('🔍 Entity names:', AppDataSource.entityMetadatas.map(e => e.name).join(', '));
     app.listen(PORT, () => {
       console.log(`🚀 Admin Panel Backend running on http://localhost:${PORT}`);
     });
@@ -93,6 +99,8 @@ AppDataSource.initialize()
     if (error.stack) {
       console.error('Stack trace:', error.stack);
     }
+    console.error('📋 DATABASE_URL:', process.env.DATABASE_URL || 'NOT SET');
+    console.error('📊 Entities count:', entities.length);
     // Запускаємо сервер навіть якщо БД не підключилась, щоб бачити помилки
     app.listen(PORT, () => {
       console.log(`⚠️  Admin Panel Backend running WITHOUT database on http://localhost:${PORT}`);

@@ -1,6 +1,6 @@
 import express from 'express';
 import { AppDataSource } from '../config/database';
-import { Property, PropertyType } from '../entities/Property';
+import { Property } from '../entities/Property';
 import { Country } from '../entities/Country';
 import { City } from '../entities/City';
 import { Area } from '../entities/Area';
@@ -13,280 +13,6 @@ import { Conversions } from '../utils/conversions';
 import { authenticateApiKeyWithSecret, AuthRequest } from '../middleware/auth';
 
 const router = express.Router();
-
-// Helper function to validate and clean URL
-// Fixes corrupted URLs that have truncation markers or concatenated URLs
-function validateAndCleanUrl(url: string): string | null {
-  if (!url || typeof url !== 'string') return null;
-  
-  let cleaned = url.trim();
-  
-  // Remove null/undefined strings
-  if (cleaned === 'null' || cleaned === 'undefined' || cleaned === '') return null;
-  
-  // Special case: if URL contains "oudinary.com" or truncated patterns, try to extract first valid URL
-  // Pattern: https://res.cloudinary.com/.../areas/sobha-h...oudinary.com/dgv0...
-  // This suggests two URLs concatenated or truncated
-  if (cleaned.includes('oudinary.com') || cleaned.includes('...')) {
-    // First, try to find all valid Cloudinary URLs in the string
-    const cloudinaryUrls = cleaned.match(/https:\/\/res\.cloudinary\.com\/[^\s"']+/g);
-    if (cloudinaryUrls && cloudinaryUrls.length > 0) {
-      // Use the first valid Cloudinary URL
-      cleaned = cloudinaryUrls[0];
-    } else {
-      // Try to extract URL before truncation or corruption
-      // Find the start of a Cloudinary URL
-      const cloudinaryStart = cleaned.indexOf('https://res.cloudinary.com');
-      if (cloudinaryStart >= 0) {
-        // Extract from start of Cloudinary URL
-        let extracted = cleaned.substring(cloudinaryStart);
-        
-        // Remove everything after truncation markers
-        if (extracted.includes('...')) {
-          extracted = extracted.substring(0, extracted.indexOf('...'));
-        }
-        if (extracted.includes('oudinary.com')) {
-          extracted = extracted.substring(0, extracted.indexOf('oudinary.com'));
-        }
-        
-        // Try to find valid file extension
-        const extensionMatch = extracted.match(/\.(jpg|jpeg|png|gif|webp)/i);
-        if (extensionMatch) {
-          // Found extension, extract up to extension
-          const extIndex = extracted.lastIndexOf(extensionMatch[1]);
-          cleaned = extracted.substring(0, extIndex + extensionMatch[1].length);
-        } else {
-          // No extension found, try to extract valid path
-          // For Cloudinary: /image/upload/v{version}/areas/{filename}
-          const pathMatch = extracted.match(/\/image\/upload\/v\d+\/areas\/[^\/]+/);
-          if (pathMatch) {
-            cleaned = 'https://res.cloudinary.com' + pathMatch[0];
-          } else {
-            // Try simpler pattern
-            const simpleMatch = extracted.match(/https:\/\/res\.cloudinary\.com\/[^\/]+\/[^\/]+\/upload\/[^\/\s]+/);
-            if (simpleMatch) {
-              cleaned = simpleMatch[0];
-            } else {
-              return null;
-            }
-          }
-        }
-      } else {
-        return null;
-      }
-    }
-  }
-  
-  // If URL still doesn't start with https://, try to find it
-  if (!cleaned.startsWith('https://') && !cleaned.startsWith('http://')) {
-    const httpsMatch = cleaned.match(/https:\/\/[^\s"']+/);
-    if (httpsMatch) {
-      cleaned = httpsMatch[0];
-    } else {
-      return null;
-    }
-  }
-  
-  // Remove truncation markers and everything after (final cleanup)
-  if (cleaned.includes('...')) {
-    cleaned = cleaned.substring(0, cleaned.indexOf('...'));
-  }
-  if (cleaned.includes('oudinary.com')) {
-    cleaned = cleaned.substring(0, cleaned.indexOf('oudinary.com'));
-  }
-  
-  // Remove any remaining invalid characters at the end
-  // Remove everything after valid file extension
-  cleaned = cleaned.replace(/(\.(jpg|jpeg|png|gif|webp))[^a-z0-9\?\/]*$/i, '$1');
-  
-  // Remove duplicate "cloudinary.com" or truncation patterns
-  if (cleaned.match(/res\.cloudinary\.com.*res\.cloudinary\.com/)) {
-    // Multiple cloudinary.com - extract first one
-    const firstMatch = cleaned.match(/https:\/\/res\.cloudinary\.com\/[^\s"']+/);
-    if (firstMatch) {
-      cleaned = firstMatch[0];
-    }
-  }
-  
-  // Validate URL format
-  try {
-    const urlObj = new URL(cleaned);
-    
-    // Ensure it's a valid HTTP/HTTPS URL
-    if (!['http:', 'https:'].includes(urlObj.protocol)) return null;
-    
-    // Ensure it has a valid hostname
-    if (!urlObj.hostname || urlObj.hostname.length === 0) return null;
-    
-    // Ensure hostname is valid (not truncated)
-    if (urlObj.hostname.includes('...') || urlObj.hostname.endsWith('.') || urlObj.hostname.includes('oudinary')) {
-      return null;
-    }
-    
-    // Ensure pathname doesn't contain truncation markers
-    if (urlObj.pathname.includes('...') || urlObj.pathname.includes('oudinary')) {
-      // Try to extract valid part before truncation
-      const truncationPos = urlObj.pathname.indexOf('...');
-      if (truncationPos > 0) {
-        urlObj.pathname = urlObj.pathname.substring(0, truncationPos);
-        cleaned = urlObj.toString();
-      } else {
-        return null;
-      }
-    }
-    
-    // Final validation: accept valid HTTP/HTTPS URLs
-    // Accept Cloudinary URLs with strict validation
-    if (cleaned.includes('res.cloudinary.com')) {
-      // Cloudinary URL should have format: https://res.cloudinary.com/{cloud_name}/{resource_type}/upload/{version}/{folder}/{filename}
-      // But be lenient - accept URLs even without file extension if they have valid structure
-      if (!/^https:\/\/res\.cloudinary\.com\/[^\/]+\/[^\/]+\/upload/.test(cleaned)) {
-        return null;
-      }
-      return cleaned;
-    }
-    
-    // For all other HTTPS URLs (including api.reelly.io, xano.io, files.alnair.ae, etc.)
-    // Accept any valid HTTPS URL that passed URL validation
-    if (urlObj.protocol === 'https:' && urlObj.hostname) {
-      // Accept any valid HTTPS URL - this includes:
-      // - api.reelly.io (property photos)
-      // - xano.io (property photos)
-      // - files.alnair.ae (legacy storage)
-      // - Any other valid HTTPS URL
-      return cleaned;
-    }
-    
-    // Reject HTTP URLs (should use HTTPS)
-    if (urlObj.protocol === 'http:') {
-      return null;
-    }
-    
-    return cleaned;
-  } catch (e) {
-    // URL parsing failed - try to extract valid part
-    // Check if it looks like a valid URL even if parsing failed
-    if (cleaned.match(/^https:\/\/(res\.cloudinary\.com|files\.alnair\.ae|api\.reelly\.io|[^\s"']*xano\.io)\/[^\s"']+/)) {
-      // Looks like valid URL structure, return it
-      return cleaned;
-    }
-    return null;
-  }
-}
-
-// Helper function to parse images from PostgreSQL text[] or simple-array
-// Handles multiple formats and validates/cleans URLs
-function parseImages(images: any): string[] | null {
-  if (!images) return null;
-  
-  // If already an array (TypeORM automatically parsed or PostgreSQL text[] returned as array)
-  if (Array.isArray(images)) {
-    const parsed = images
-      .map(img => {
-        // Skip null/undefined
-        if (img === null || img === undefined) return null;
-        
-        // Handle string URLs
-        if (typeof img === 'string') {
-          const trimmed = img.trim();
-          // Skip empty strings or strings that are just "{}"
-          if (trimmed.length === 0 || trimmed === '{}' || trimmed === '[object Object]') {
-            return null;
-          }
-          return validateAndCleanUrl(trimmed);
-        }
-        
-        // Handle objects
-        if (typeof img === 'object') {
-          // Skip empty objects {}
-          if (Object.keys(img).length === 0) {
-            return null;
-          }
-          
-          // Try to extract URL from object
-          if (img.url && typeof img.url === 'string') {
-            const trimmed = img.url.trim();
-            if (trimmed.length === 0 || trimmed === '{}') {
-              return null;
-            }
-            return validateAndCleanUrl(trimmed);
-          }
-          
-          // Try to extract URL from src property
-          if (img.src && typeof img.src === 'string') {
-            const trimmed = img.src.trim();
-            if (trimmed.length === 0 || trimmed === '{}') {
-              return null;
-            }
-            return validateAndCleanUrl(trimmed);
-          }
-          
-          // If object doesn't have url or src, skip it
-          return null;
-        }
-        
-        // For other types (numbers, etc.), try to convert to string
-        const str = String(img).trim();
-        if (str === '{}' || str === '[object Object]' || str.length === 0) {
-          return null;
-        }
-        
-        // Only accept if it looks like a URL
-        if (str.startsWith('http://') || str.startsWith('https://')) {
-          return validateAndCleanUrl(str);
-        }
-        
-        return null;
-      })
-      .filter((url): url is string => url !== null && url.length > 0);
-    return parsed.length > 0 ? parsed : null;
-  }
-  
-  // If it's a string
-  if (typeof images === 'string') {
-    // PostgreSQL array format: "{url1,url2,url3}" or '{"url1","url2","url3"}'
-    if (images.startsWith('{') && images.endsWith('}')) {
-      const content = images.slice(1, -1); // Remove { and }
-      if (content.trim().length === 0) return null;
-      const urls = content
-        .split(',')
-        .map(url => url.trim().replace(/^["']|["']$/g, '')) // Remove quotes
-        .map(url => validateAndCleanUrl(url))
-        .filter((url): url is string => url !== null);
-      return urls.length > 0 ? urls : null;
-    }
-    
-    // JSON array string: '["url1","url2"]'
-    if (images.startsWith('[') && images.endsWith(']')) {
-      try {
-        const parsed = JSON.parse(images);
-        if (Array.isArray(parsed)) {
-          const urls = parsed
-            .map(url => validateAndCleanUrl(String(url)))
-            .filter((url): url is string => url !== null);
-          return urls.length > 0 ? urls : null;
-        }
-      } catch (e) {
-        // Not valid JSON, continue to other formats
-      }
-    }
-    
-    // Comma-separated string (simple-array format): "url1,url2,url3"
-    if (images.includes(',')) {
-      const urls = images
-        .split(',')
-        .map(url => validateAndCleanUrl(url.trim()))
-        .filter((url): url is string => url !== null);
-      return urls.length > 0 ? urls : null;
-    }
-    
-    // Single URL
-    const cleaned = validateAndCleanUrl(images);
-    return cleaned ? [cleaned] : null;
-  }
-  
-  return null;
-}
 
 // GET /api/public/data - Get all public data (returns ALL properties from ALL areas, no filtering)
 router.get('/data', authenticateApiKeyWithSecret, async (req: AuthRequest, res) => {
@@ -409,7 +135,7 @@ router.get('/data', authenticateApiKeyWithSecret, async (req: AuthRequest, res) 
           balconySizeSqft: u.balconySize ? Conversions.sqmToSqft(u.balconySize) : null,
           planImage: u.planImage,
         })) || [],
-        photos: parseImages(p.photos) || [],
+        photos: p.photos || [],
         createdAt: p.createdAt,
         updatedAt: p.updatedAt,
       };
@@ -469,7 +195,7 @@ router.get('/data', authenticateApiKeyWithSecret, async (req: AuthRequest, res) 
         } : null,
         description: a.description || null,
         infrastructure: a.infrastructure || null,
-        images: parseImages(a.images),
+        images: a.images || null,
       })),
       developers: developers.map(d => ({
         id: d.id,
@@ -716,7 +442,7 @@ router.get('/areas', authenticateApiKeyWithSecret, async (req: AuthRequest, res)
             } : null,
             description: areaRaw.description || null,
             infrastructure: areaRaw.infrastructure || null,
-            images: parseImages(areaRaw.images),
+            images: areaRaw.images || null,
           };
         });
       } else {
@@ -810,7 +536,7 @@ router.get('/areas', authenticateApiKeyWithSecret, async (req: AuthRequest, res)
         },
         description: (area as any).description || null,
         infrastructure: (area as any).infrastructure || null,
-        images: parseImages((area as any).images),
+        images: (area as any).images || null,
       };
     });
 
@@ -1099,203 +825,6 @@ router.get('/news/:slug', authenticateApiKeyWithSecret, async (req: AuthRequest,
   } catch (error: any) {
     console.error('Error fetching news detail:', error);
     res.status(500).json(errorResponse('Failed to fetch news detail', error.message));
-  }
-});
-
-// GET /api/public/properties - Public properties endpoint (NO authentication required)
-router.get('/properties', async (req, res) => {
-  try {
-    console.log('[Public API] GET /api/public/properties request:', {
-      query: req.query,
-      propertyType: req.query.propertyType,
-    });
-
-    const { 
-      propertyType, 
-      developerId, 
-      cityId, 
-      areaId,
-      bedrooms,
-      sizeFrom,
-      sizeTo,
-      priceFrom,
-      priceTo,
-      search,
-      sortBy,
-      sortOrder,
-      page,
-      limit
-    } = req.query;
-    
-    const where: any = {};
-    
-    // Базові фільтри
-    if (propertyType) where.propertyType = propertyType;
-    if (developerId) where.developerId = developerId;
-    if (cityId) where.cityId = cityId;
-    if (areaId) where.areaId = areaId;
-
-    // Перевірка чи підключено до БД
-    if (!AppDataSource.isInitialized) {
-      console.error('Database not initialized');
-      return res.status(500).json({
-        success: false,
-        message: 'Database connection not initialized',
-      });
-    }
-
-    // Базовий query builder для гнучкої фільтрації
-    const queryBuilder = AppDataSource.getRepository(Property)
-      .createQueryBuilder('property')
-      .leftJoinAndSelect('property.country', 'country')
-      .leftJoinAndSelect('property.city', 'city')
-      .leftJoinAndSelect('property.area', 'area')
-      .leftJoinAndSelect('property.developer', 'developer')
-      .leftJoinAndSelect('property.facilities', 'facilities')
-      .leftJoinAndSelect('property.units', 'units');
-
-    // Застосовуємо базові фільтри
-    Object.keys(where).forEach(key => {
-      queryBuilder.andWhere(`property.${key} = :${key}`, { [key]: where[key] });
-    });
-
-    // Фільтр по кількості спалень
-    if (bedrooms) {
-      const bedroomsArray: string[] = Array.isArray(bedrooms) 
-        ? bedrooms.map(b => String(b))
-        : String(bedrooms).split(',');
-      
-      const bedroomsConditions = bedroomsArray.map((bed: string, index: number) => {
-        const bedNum = parseInt(bed.trim(), 10);
-        if (isNaN(bedNum)) return null;
-        
-        return `(
-          (property.propertyType = 'off-plan' AND property.bedroomsFrom <= :bed${index} AND property.bedroomsTo >= :bed${index})
-          OR
-          (property.propertyType = 'secondary' AND property.bedrooms = :bed${index})
-        )`;
-      }).filter((item): item is string => item !== null);
-      
-      if (bedroomsConditions.length > 0) {
-        queryBuilder.andWhere(`(${bedroomsConditions.join(' OR ')})`);
-        bedroomsArray.forEach((bed: string, index: number) => {
-          const bedNum = parseInt(bed.trim(), 10);
-          if (!isNaN(bedNum)) {
-            queryBuilder.setParameter(`bed${index}`, bedNum);
-          }
-        });
-      }
-    }
-
-    // Фільтр по розміру
-    if (sizeFrom) {
-      const sizeFromNum = parseFloat(sizeFrom.toString());
-      if (!isNaN(sizeFromNum)) {
-        queryBuilder.andWhere(
-          `(property.sizeFrom >= :sizeFrom OR property.size >= :sizeFrom)`,
-          { sizeFrom: sizeFromNum }
-        );
-      }
-    }
-    if (sizeTo) {
-      const sizeToNum = parseFloat(sizeTo.toString());
-      if (!isNaN(sizeToNum)) {
-        queryBuilder.andWhere(
-          `(property.sizeFrom <= :sizeTo OR property.size <= :sizeTo)`,
-          { sizeTo: sizeToNum }
-        );
-      }
-    }
-
-    // Фільтр по ціні
-    if (priceFrom) {
-      const priceFromNum = parseFloat(priceFrom.toString());
-      if (!isNaN(priceFromNum)) {
-        queryBuilder.andWhere(
-          `(property.priceFrom >= :priceFrom OR property.price >= :priceFrom)`,
-          { priceFrom: priceFromNum }
-        );
-      }
-    }
-    if (priceTo) {
-      const priceToNum = parseFloat(priceTo.toString());
-      if (!isNaN(priceToNum)) {
-        queryBuilder.andWhere(
-          `(property.priceFrom <= :priceTo OR property.price <= :priceTo)`,
-          { priceTo: priceToNum }
-        );
-      }
-    }
-
-    // Текстовий пошук
-    if (search) {
-      const searchTerm = `%${search.toString().toLowerCase()}%`;
-      queryBuilder.andWhere(
-        `(LOWER(property.name) LIKE :search OR LOWER(property.description) LIKE :search)`,
-        { search: searchTerm }
-      );
-    }
-
-    // Сортування
-    const sortField = sortBy?.toString() || 'createdAt';
-    const sortDirection = sortOrder?.toString().toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
-    
-    const allowedSortFields = ['createdAt', 'name', 'price', 'priceFrom', 'size', 'sizeFrom'];
-    if (allowedSortFields.includes(sortField)) {
-      queryBuilder.orderBy(`property.${sortField}`, sortDirection);
-    } else {
-      queryBuilder.orderBy('property.createdAt', 'DESC');
-    }
-
-    // Пагінація
-    const pageNum = page ? parseInt(page.toString(), 10) : 1;
-    const limitNum = limit ? parseInt(limit.toString(), 10) : 20;
-    const MAX_LIMIT = 100;
-    const finalLimit = Math.min(limitNum, MAX_LIMIT);
-    const skip = (pageNum - 1) * finalLimit;
-
-    const totalCount = await queryBuilder.getCount();
-    queryBuilder.skip(skip).take(finalLimit);
-    const properties = await queryBuilder.getMany();
-
-    const propertiesWithConversions = properties.map(p => {
-      let areaField: any = p.area;
-      if (p.area && p.propertyType === 'off-plan') {
-        const areaName = p.area.nameEn || '';
-        const cityName = p.city?.nameEn || '';
-        areaField = cityName ? `${areaName}, ${cityName}` : areaName;
-      }
-
-      return {
-        ...p,
-        photos: p.photos || [],
-        area: areaField,
-        priceFromAED: p.priceFrom ? Conversions.usdToAed(p.priceFrom) : null,
-        priceAED: p.price ? Conversions.usdToAed(p.price) : null,
-        sizeFromSqft: p.sizeFrom ? Conversions.sqmToSqft(p.sizeFrom) : null,
-        sizeToSqft: p.sizeTo ? Conversions.sqmToSqft(p.sizeTo) : null,
-        sizeSqft: p.size ? Conversions.sqmToSqft(p.size) : null,
-      };
-    });
-
-    const totalPages = Math.ceil(totalCount / finalLimit);
-    
-    res.json(successResponse({
-      data: propertiesWithConversions,
-      pagination: {
-        total: totalCount,
-        page: pageNum,
-        limit: finalLimit,
-        totalPages: totalPages,
-      },
-    }));
-  } catch (error: any) {
-    console.error('Error fetching public properties:', error);
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Failed to fetch properties',
-      error: process.env.NODE_ENV === 'development' ? error.stack : undefined,
-    });
   }
 });
 

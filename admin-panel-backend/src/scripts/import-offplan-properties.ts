@@ -283,11 +283,12 @@ async function importOffPlanProperties() {
         }
 
         // Convert photos from array of objects to array of URLs
+        // Keep ALL photos without truncating URLs - only trim whitespace
         const photoUrls: string[] = [];
         if (propertyData.photos && Array.isArray(propertyData.photos)) {
           for (const photo of propertyData.photos) {
-            if (photo.src) {
-              photoUrls.push(photo.src);
+            if (photo.src && typeof photo.src === 'string' && photo.src.trim().length > 0) {
+              photoUrls.push(photo.src.trim()); // Keep full URL, only trim whitespace
             }
           }
         }

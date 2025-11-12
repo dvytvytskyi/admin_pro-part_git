@@ -10,229 +10,20 @@ import { successResponse } from '../utils/response';
 
 const router = express.Router();
 
-// Helper function to validate and clean URL
-// Fixes corrupted URLs that have truncation markers or concatenated URLs
-function validateAndCleanUrl(url: string): string | null {
-  if (!url || typeof url !== 'string') return null;
-  
-  let cleaned = url.trim();
-  
-  // Remove null/undefined strings
-  if (cleaned === 'null' || cleaned === 'undefined' || cleaned === '') return null;
-  
-  // Special case: if URL contains "oudinary.com" or truncated patterns, try to extract first valid URL
-  // Pattern: https://res.cloudinary.com/.../areas/sobha-h...oudinary.com/dgv0...
-  // This suggests two URLs concatenated or truncated
-  if (cleaned.includes('oudinary.com') || cleaned.includes('...')) {
-    // First, try to find all valid Cloudinary URLs in the string
-    const cloudinaryUrls = cleaned.match(/https:\/\/res\.cloudinary\.com\/[^\s"']+/g);
-    if (cloudinaryUrls && cloudinaryUrls.length > 0) {
-      // Use the first valid Cloudinary URL
-      cleaned = cloudinaryUrls[0];
-    } else {
-      // Try to extract URL before truncation or corruption
-      // Find the start of a Cloudinary URL
-      const cloudinaryStart = cleaned.indexOf('https://res.cloudinary.com');
-      if (cloudinaryStart >= 0) {
-        // Extract from start of Cloudinary URL
-        let extracted = cleaned.substring(cloudinaryStart);
-        
-        // Remove everything after truncation markers
-        if (extracted.includes('...')) {
-          extracted = extracted.substring(0, extracted.indexOf('...'));
-        }
-        if (extracted.includes('oudinary.com')) {
-          extracted = extracted.substring(0, extracted.indexOf('oudinary.com'));
-        }
-        
-        // Try to find valid file extension
-        const extensionMatch = extracted.match(/\.(jpg|jpeg|png|gif|webp)/i);
-        if (extensionMatch) {
-          // Found extension, extract up to extension
-          const extIndex = extracted.lastIndexOf(extensionMatch[1]);
-          cleaned = extracted.substring(0, extIndex + extensionMatch[1].length);
-        } else {
-          // No extension found, try to extract valid path
-          // For Cloudinary: /image/upload/v{version}/areas/{filename}
-          const pathMatch = extracted.match(/\/image\/upload\/v\d+\/areas\/[^\/]+/);
-          if (pathMatch) {
-            cleaned = 'https://res.cloudinary.com' + pathMatch[0];
-          } else {
-            // Try simpler pattern
-            const simpleMatch = extracted.match(/https:\/\/res\.cloudinary\.com\/[^\/]+\/[^\/]+\/upload\/[^\/\s]+/);
-            if (simpleMatch) {
-              cleaned = simpleMatch[0];
-            } else {
-              return null;
-            }
-          }
-        }
-      } else {
-        return null;
-      }
+// Helper function to parse PostgreSQL array string to JavaScript array
+const parseArray = (arr: any): string[] | null => {
+  if (!arr) return null;
+  if (Array.isArray(arr)) return arr; // Already an array
+  if (typeof arr === 'string') {
+    // Parse PostgreSQL array format: {url1,url2,url3}
+    if (arr.startsWith('{') && arr.endsWith('}')) {
+      return arr.slice(1, -1).split(',').map(url => url.trim()).filter(url => url.length > 0);
     }
+    // If it's a single URL string
+    return [arr];
   }
-  
-  // If URL still doesn't start with https://, try to find it
-  if (!cleaned.startsWith('https://') && !cleaned.startsWith('http://')) {
-    const httpsMatch = cleaned.match(/https:\/\/[^\s"']+/);
-    if (httpsMatch) {
-      cleaned = httpsMatch[0];
-    } else {
-      return null;
-    }
-  }
-  
-  // Remove truncation markers and everything after (final cleanup)
-  if (cleaned.includes('...')) {
-    cleaned = cleaned.substring(0, cleaned.indexOf('...'));
-  }
-  if (cleaned.includes('oudinary.com')) {
-    cleaned = cleaned.substring(0, cleaned.indexOf('oudinary.com'));
-  }
-  
-  // Remove any remaining invalid characters at the end
-  // Remove everything after valid file extension
-  cleaned = cleaned.replace(/(\.(jpg|jpeg|png|gif|webp))[^a-z0-9\?\/]*$/i, '$1');
-  
-  // Remove duplicate "cloudinary.com" or truncation patterns
-  if (cleaned.match(/res\.cloudinary\.com.*res\.cloudinary\.com/)) {
-    // Multiple cloudinary.com - extract first one
-    const firstMatch = cleaned.match(/https:\/\/res\.cloudinary\.com\/[^\s"']+/);
-    if (firstMatch) {
-      cleaned = firstMatch[0];
-    }
-  }
-  
-  // Validate URL format
-  try {
-    const urlObj = new URL(cleaned);
-    
-    // Ensure it's a valid HTTP/HTTPS URL
-    if (!['http:', 'https:'].includes(urlObj.protocol)) return null;
-    
-    // Ensure it has a valid hostname
-    if (!urlObj.hostname || urlObj.hostname.length === 0) return null;
-    
-    // Ensure hostname is valid (not truncated)
-    if (urlObj.hostname.includes('...') || urlObj.hostname.endsWith('.') || urlObj.hostname.includes('oudinary')) {
-      return null;
-    }
-    
-    // Ensure pathname doesn't contain truncation markers
-    if (urlObj.pathname.includes('...') || urlObj.pathname.includes('oudinary')) {
-      // Try to extract valid part before truncation
-      const truncationPos = urlObj.pathname.indexOf('...');
-      if (truncationPos > 0) {
-        urlObj.pathname = urlObj.pathname.substring(0, truncationPos);
-        cleaned = urlObj.toString();
-      } else {
-        return null;
-      }
-    }
-    
-    // Final validation: accept valid HTTP/HTTPS URLs
-    // Accept Cloudinary URLs
-    if (cleaned.includes('res.cloudinary.com')) {
-      // Cloudinary URL should have format: https://res.cloudinary.com/{cloud_name}/{resource_type}/upload/{version}/{folder}/{filename}
-      // But be lenient - accept URLs even without file extension if they have valid structure
-      if (!/^https:\/\/res\.cloudinary\.com\/[^\/]+\/[^\/]+\/upload/.test(cleaned)) {
-        return null;
-      }
-    }
-    // Also accept files.alnair.ae URLs (legacy file storage)
-    else if (cleaned.includes('files.alnair.ae')) {
-      // Accept files.alnair.ae URLs if they have valid structure
-      if (!/^https:\/\/files\.alnair\.ae\/[^\s"']+/.test(cleaned)) {
-        return null;
-      }
-    }
-    // Accept any other valid HTTPS URLs that pass URL validation
-    else if (urlObj.protocol === 'https:' && urlObj.hostname) {
-      // Accept any valid HTTPS URL
-      return cleaned;
-    }
-    // Reject HTTP URLs (should use HTTPS)
-    else if (urlObj.protocol === 'http:') {
-      return null;
-    }
-    
-    return cleaned;
-  } catch (e) {
-    // URL parsing failed - try to extract valid part
-    // Check if it looks like a valid URL even if parsing failed
-    if (cleaned.match(/^https:\/\/(res\.cloudinary\.com|files\.alnair\.ae)\/[^\s"']+/)) {
-      // Looks like valid URL structure, return it
-      return cleaned;
-    }
-    return null;
-  }
-}
-
-// Helper function to parse images from PostgreSQL text[] or simple-array
-// Handles multiple formats and validates/cleans URLs
-function parseImages(images: any): string[] | null {
-  if (!images) return null;
-  
-  // If already an array (TypeORM automatically parsed or PostgreSQL text[] returned as array)
-  if (Array.isArray(images)) {
-    const parsed = images
-      .map(img => {
-        // Handle both string URLs and objects
-        if (typeof img === 'string') return validateAndCleanUrl(img);
-        if (typeof img === 'object' && img !== null && img.url) return validateAndCleanUrl(String(img.url));
-        if (img !== null && img !== undefined) return validateAndCleanUrl(String(img));
-        return null;
-      })
-      .filter((url): url is string => url !== null);
-    return parsed.length > 0 ? parsed : null;
-  }
-  
-  // If it's a string
-  if (typeof images === 'string') {
-    // PostgreSQL array format: "{url1,url2,url3}" or '{"url1","url2","url3"}'
-    if (images.startsWith('{') && images.endsWith('}')) {
-      const content = images.slice(1, -1); // Remove { and }
-      if (content.trim().length === 0) return null;
-      const urls = content
-        .split(',')
-        .map(url => url.trim().replace(/^["']|["']$/g, '')) // Remove quotes
-        .map(url => validateAndCleanUrl(url))
-        .filter((url): url is string => url !== null);
-      return urls.length > 0 ? urls : null;
-    }
-    
-    // JSON array string: '["url1","url2"]'
-    if (images.startsWith('[') && images.endsWith(']')) {
-      try {
-        const parsed = JSON.parse(images);
-        if (Array.isArray(parsed)) {
-          const urls = parsed
-            .map(url => validateAndCleanUrl(String(url)))
-            .filter((url): url is string => url !== null);
-          return urls.length > 0 ? urls : null;
-        }
-      } catch (e) {
-        // Not valid JSON, continue to other formats
-      }
-    }
-    
-    // Comma-separated string (simple-array format): "url1,url2,url3"
-    if (images.includes(',')) {
-      const urls = images
-        .split(',')
-        .map(url => validateAndCleanUrl(url.trim()))
-        .filter((url): url is string => url !== null);
-      return urls.length > 0 ? urls : null;
-    }
-    
-    // Single URL
-    const cleaned = validateAndCleanUrl(images);
-    return cleaned ? [cleaned] : null;
-  }
-  
   return null;
-}
+};
 
 router.use((req, res, next) => {
   const apiKey = req.headers['x-api-key'];
@@ -241,8 +32,23 @@ router.use((req, res, next) => {
 });
 
 router.get('/countries', async (req, res) => {
-  const countries = await AppDataSource.getRepository(Country).find({ relations: ['cities'] });
-  res.json(successResponse(countries));
+  try {
+    if (!AppDataSource.isInitialized) {
+      console.error('Database not initialized in /countries');
+      return res.status(500).json({
+        success: false,
+        message: 'Database connection not initialized',
+      });
+    }
+    const countries = await AppDataSource.getRepository(Country).find({ relations: ['cities'] });
+    res.json(successResponse(countries));
+  } catch (error: any) {
+    console.error('Error loading countries:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to load countries',
+    });
+  }
 });
 
 router.get('/cities', async (req, res) => {
@@ -292,7 +98,7 @@ router.get('/areas', async (req, res) => {
         nameAr: row.nameAr,
         description: row.description || null,
         infrastructure: row.infrastructure || null,
-        images: parseImages(row.images),
+        images: parseArray(row.images),
       }));
       
       res.json(successResponse(areas));
@@ -340,7 +146,7 @@ router.get('/locations', async (req, res) => {
         nameAr: row.nameAr,
         description: row.description || null,
         infrastructure: row.infrastructure || null,
-        images: parseImages(row.images),
+        images: parseArray(row.images),
       }));
       
       res.json(successResponse({
@@ -496,7 +302,7 @@ router.get('/areas/:id', async (req, res) => {
         nameAr: row.nameAr,
         description: row.description || null,
         infrastructure: row.infrastructure || null,
-        images: parseImages(row.images),
+        images: parseArray(row.images),
       };
       
       res.json(successResponse(area));
@@ -529,29 +335,11 @@ router.put('/areas/:id', async (req, res) => {
     if (description !== undefined) area.description = description;
     if (infrastructure !== undefined) area.infrastructure = infrastructure;
     if (images !== undefined) {
-      // Validate images array
-      if (!Array.isArray(images)) {
-        return res.status(400).json({ success: false, message: 'Images must be an array' });
-      }
-      
       // Перевірка що не більше 8 фото
       if (images.length > 8) {
         return res.status(400).json({ success: false, message: 'Maximum 8 images allowed' });
       }
-      
-      // Validate and clean each URL
-      const validatedImages = images
-        .map((url: any) => validateAndCleanUrl(String(url)))
-        .filter((url): url is string => url !== null);
-      
-      if (validatedImages.length !== images.length) {
-        return res.status(400).json({ 
-          success: false, 
-          message: 'Some image URLs are invalid. Please check all URLs are valid HTTP/HTTPS URLs.' 
-        });
-      }
-      
-      area.images = validatedImages;
+      area.images = images;
     }
     
     const updatedArea = await AppDataSource.getRepository(Area).save(area);

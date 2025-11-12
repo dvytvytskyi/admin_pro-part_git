@@ -162,13 +162,13 @@ async function importDistrictsData() {
         infrastructure.description = district.infrastructure_description;
       }
 
-      // Prepare images array (limit to 8 photos)
+      // Prepare images array (keep ALL photos without truncating URLs)
       let images: string[] = [];
       if (district.photos && Array.isArray(district.photos)) {
         images = district.photos
-          .slice(0, 8) // Limit to 8 photos
           .map(photo => photo.src)
-          .filter(src => src && typeof src === 'string');
+          .filter(src => src && typeof src === 'string' && src.trim().length > 0)
+          .map(src => src.trim()); // Keep full URL, only trim whitespace
       }
 
       // Update area using raw SQL to properly handle JSONB and arrays

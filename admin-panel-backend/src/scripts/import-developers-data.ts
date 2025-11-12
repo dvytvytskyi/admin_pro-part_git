@@ -126,17 +126,17 @@ async function importDevelopersData() {
         logo = devData.logo.src || devData.logo.logo || null;
       }
 
-      // Prepare images array (use photo_urls or photos, limit to reasonable number)
+      // Prepare images array (use photo_urls or photos, keep ALL photos without truncating URLs)
       let images: string[] = [];
       if (devData.photo_urls && Array.isArray(devData.photo_urls)) {
         images = devData.photo_urls
-          .slice(0, 20) // Limit to 20 photos
-          .filter(url => url && typeof url === 'string');
+          .filter(url => url && typeof url === 'string' && url.trim().length > 0)
+          .map(url => url.trim()); // Keep full URL, only trim whitespace
       } else if (devData.photos && Array.isArray(devData.photos)) {
         images = devData.photos
-          .slice(0, 20)
           .map(photo => photo.src)
-          .filter(src => src && typeof src === 'string');
+          .filter(src => src && typeof src === 'string' && src.trim().length > 0)
+          .map(src => src.trim()); // Keep full URL, only trim whitespace
       }
 
       // Update developer using raw SQL to properly handle arrays

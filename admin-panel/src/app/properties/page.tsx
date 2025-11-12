@@ -58,32 +58,13 @@ export default function PropertiesPage() {
         params.search = searchQuery
       }
 
-      // Використовуємо публічний ендпоінт без автентифікації
-      const { data } = await api.get('/public/properties', { params })
+      // Використовуємо params як другий аргумент axios.get для правильного форматування
+      const { data } = await api.get('/properties', { params })
       
       // Бекенд ЗАВЖДИ повертає структуру з пагінацією
       if (data.data?.data && data.data?.pagination) {
         // Нова структура з пагінацією
-        const propertiesData = data.data.data;
-        
-        // Діагностика: перевіряємо photos
-        if (process.env.NODE_ENV === 'development') {
-          const propertiesWithPhotos = propertiesData.filter((p: any) => p.photos && Array.isArray(p.photos) && p.photos.length > 0);
-          const propertiesWithoutPhotos = propertiesData.filter((p: any) => !p.photos || !Array.isArray(p.photos) || p.photos.length === 0);
-          console.log('[Properties] Loaded:', {
-            total: propertiesData.length,
-            withPhotos: propertiesWithPhotos.length,
-            withoutPhotos: propertiesWithoutPhotos.length,
-            samplePhotos: propertiesWithPhotos.slice(0, 3).map((p: any) => ({
-              name: p.name,
-              photos: p.photos,
-              firstPhoto: p.photos?.[0],
-              firstPhotoType: typeof p.photos?.[0],
-            })),
-          });
-        }
-        
-        setProperties(propertiesData)
+        setProperties(data.data.data)
         setTotalCount(data.data.pagination.total)
         setTotalPages(data.data.pagination.totalPages)
       } else if (data.data && Array.isArray(data.data)) {
@@ -248,15 +229,7 @@ export default function PropertiesPage() {
                     >
                       <TableCell className="px-5 py-4 sm:px-6 text-start">
                         <div className="flex items-center gap-3">
-                          {(() => {
-                            // Безпечна перевірка photos - перевіряємо що це валідний URL рядок
-                            const firstPhoto = property.photos?.[0];
-                            const isValidPhoto = firstPhoto && 
-                              typeof firstPhoto === 'string' && 
-                              firstPhoto.trim().length > 0 && 
-                              (firstPhoto.startsWith('http://') || firstPhoto.startsWith('https://'));
-                            
-                            return isValidPhoto ? (
+                          {property.photos?.[0] ? (
                             <div className="relative w-12 h-12 overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800">
                               {/* Skeleton loader - show while loading (undefined or true) */}
                               {imageLoadingStates[property.id] !== false && (
@@ -272,7 +245,7 @@ export default function PropertiesPage() {
                               <Image
                                 width={48}
                                 height={48}
-                                src={firstPhoto}
+                                src={property.photos[0]}
                                 alt={property.name || 'Property'}
                                 className={`object-cover w-full h-full transition-opacity duration-300 ${
                                   imageLoadingStates[property.id] === false ? 'opacity-100' : 'opacity-0'
@@ -291,7 +264,7 @@ export default function PropertiesPage() {
                                 }}
                               />
                             </div>
-                            ) : (
+                          ) : (
                             <div className="w-12 h-12 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
                               <svg
                                 className="w-6 h-6 text-gray-400"
@@ -307,8 +280,7 @@ export default function PropertiesPage() {
                                 />
                               </svg>
                             </div>
-                          );
-                          })()}
+                          )}
                           <div>
                             <span className="block font-medium text-gray-800 text-theme-sm dark:text-white/90">
                               {property.name || 'Unnamed Property'}
