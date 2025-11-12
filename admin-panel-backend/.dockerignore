@@ -7,6 +7,5 @@ npm-debug.log
 *.md
 dist
 *.log
-src/scripts
 scripts
 
