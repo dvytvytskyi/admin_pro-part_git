@@ -11,6 +11,7 @@ import { successResponse } from '../utils/response';
 const router = express.Router();
 
 // Helper function to validate and clean URL
+// Fixes corrupted URLs that have truncation markers or concatenated URLs
 function validateAndCleanUrl(url: string): string | null {
   if (!url || typeof url !== 'string') return null;
   
@@ -19,54 +20,87 @@ function validateAndCleanUrl(url: string): string | null {
   // Remove null/undefined strings
   if (cleaned === 'null' || cleaned === 'undefined' || cleaned === '') return null;
   
-  // Find first valid HTTPS URL (most common case)
-  const httpsUrlMatch = cleaned.match(/https:\/\/[^\s"']+/);
-  if (httpsUrlMatch) {
-    cleaned = httpsUrlMatch[0];
-  } else {
-    // Try HTTP
-    const httpUrlMatch = cleaned.match(/http:\/\/[^\s"']+/);
-    if (httpUrlMatch) {
-      cleaned = httpUrlMatch[0];
+  // Special case: if URL contains "oudinary.com" or truncated patterns, try to extract first valid URL
+  // Pattern: https://res.cloudinary.com/.../areas/sobha-h...oudinary.com/dgv0...
+  // This suggests two URLs concatenated or truncated
+  if (cleaned.includes('oudinary.com') || cleaned.includes('...')) {
+    // First, try to find all valid Cloudinary URLs in the string
+    const cloudinaryUrls = cleaned.match(/https:\/\/res\.cloudinary\.com\/[^\s"']+/g);
+    if (cloudinaryUrls && cloudinaryUrls.length > 0) {
+      // Use the first valid Cloudinary URL
+      cleaned = cloudinaryUrls[0];
+    } else {
+      // Try to extract URL before truncation or corruption
+      // Find the start of a Cloudinary URL
+      const cloudinaryStart = cleaned.indexOf('https://res.cloudinary.com');
+      if (cloudinaryStart >= 0) {
+        // Extract from start of Cloudinary URL
+        let extracted = cleaned.substring(cloudinaryStart);
+        
+        // Remove everything after truncation markers
+        if (extracted.includes('...')) {
+          extracted = extracted.substring(0, extracted.indexOf('...'));
+        }
+        if (extracted.includes('oudinary.com')) {
+          extracted = extracted.substring(0, extracted.indexOf('oudinary.com'));
+        }
+        
+        // Try to find valid file extension
+        const extensionMatch = extracted.match(/\.(jpg|jpeg|png|gif|webp)/i);
+        if (extensionMatch) {
+          // Found extension, extract up to extension
+          const extIndex = extracted.lastIndexOf(extensionMatch[1]);
+          cleaned = extracted.substring(0, extIndex + extensionMatch[1].length);
+        } else {
+          // No extension found, try to extract valid path
+          // For Cloudinary: /image/upload/v{version}/areas/{filename}
+          const pathMatch = extracted.match(/\/image\/upload\/v\d+\/areas\/[^\/]+/);
+          if (pathMatch) {
+            cleaned = 'https://res.cloudinary.com' + pathMatch[0];
+          } else {
+            // Try simpler pattern
+            const simpleMatch = extracted.match(/https:\/\/res\.cloudinary\.com\/[^\/]+\/[^\/]+\/upload\/[^\/\s]+/);
+            if (simpleMatch) {
+              cleaned = simpleMatch[0];
+            } else {
+              return null;
+            }
+          }
+        }
+      } else {
+        return null;
+      }
     }
   }
   
-  // Remove trailing invalid characters (like ... or truncation markers)
-  // Remove everything after file extension or common URL endings
-  cleaned = cleaned.replace(/\.\.\..*$/, ''); // Remove ... and everything after
-  cleaned = cleaned.replace(/(\.(jpg|jpeg|png|gif|webp))[^a-z0-9]*$/i, '$1'); // Clean after extension
-  
-  // Fix common truncation patterns in Cloudinary URLs
-  // Pattern: ...oudinary.com or similar truncations that suggest URL corruption
-  // Check if URL contains truncation markers or corrupted parts
-  if (cleaned.includes('oudinary.com') || (cleaned.includes('cloudinary.com/dgv0') && !cleaned.includes('res.cloudinary.com'))) {
-    // Try to extract valid Cloudinary URL pattern
-    const cloudinaryMatch = cleaned.match(/https?:\/\/res\.cloudinary\.com\/[^\s"']+/);
-    if (cloudinaryMatch) {
-      cleaned = cloudinaryMatch[0];
+  // If URL still doesn't start with https://, try to find it
+  if (!cleaned.startsWith('https://') && !cleaned.startsWith('http://')) {
+    const httpsMatch = cleaned.match(/https:\/\/[^\s"']+/);
+    if (httpsMatch) {
+      cleaned = httpsMatch[0];
     } else {
-      // If we can't find valid pattern, return null
       return null;
     }
   }
   
-  // Check for truncation in the middle of URL (like "...oudinary.com")
-  // Extract only the part before truncation
-  if (cleaned.includes('...') && !cleaned.endsWith('...')) {
-    // URL has truncation in the middle - extract valid part
-    const beforeTruncation = cleaned.substring(0, cleaned.indexOf('...'));
-    // Try to find valid URL ending (file extension or path end)
-    const extensionMatch = beforeTruncation.match(/^(.+\.(jpg|jpeg|png|gif|webp))/i);
-    if (extensionMatch) {
-      cleaned = extensionMatch[1];
-    } else {
-      // No extension, try to find last valid path segment
-      const lastSlash = beforeTruncation.lastIndexOf('/');
-      if (lastSlash > 0) {
-        cleaned = beforeTruncation.substring(0, lastSlash + 1);
-      } else {
-        cleaned = beforeTruncation;
-      }
+  // Remove truncation markers and everything after (final cleanup)
+  if (cleaned.includes('...')) {
+    cleaned = cleaned.substring(0, cleaned.indexOf('...'));
+  }
+  if (cleaned.includes('oudinary.com')) {
+    cleaned = cleaned.substring(0, cleaned.indexOf('oudinary.com'));
+  }
+  
+  // Remove any remaining invalid characters at the end
+  // Remove everything after valid file extension
+  cleaned = cleaned.replace(/(\.(jpg|jpeg|png|gif|webp))[^a-z0-9\?\/]*$/i, '$1');
+  
+  // Remove duplicate "cloudinary.com" or truncation patterns
+  if (cleaned.match(/res\.cloudinary\.com.*res\.cloudinary\.com/)) {
+    // Multiple cloudinary.com - extract first one
+    const firstMatch = cleaned.match(/https:\/\/res\.cloudinary\.com\/[^\s"']+/);
+    if (firstMatch) {
+      cleaned = firstMatch[0];
     }
   }
   
@@ -80,32 +114,41 @@ function validateAndCleanUrl(url: string): string | null {
     // Ensure it has a valid hostname
     if (!urlObj.hostname || urlObj.hostname.length === 0) return null;
     
-    // Ensure hostname doesn't contain truncation markers
-    if (urlObj.hostname.includes('...') || urlObj.hostname.endsWith('.')) return null;
+    // Ensure hostname is valid (not truncated)
+    if (urlObj.hostname.includes('...') || urlObj.hostname.endsWith('.') || urlObj.hostname.includes('oudinary')) {
+      return null;
+    }
     
-    // Ensure pathname is valid (doesn't contain truncation markers in the middle)
-    if (urlObj.pathname.includes('...')) {
+    // Ensure pathname doesn't contain truncation markers
+    if (urlObj.pathname.includes('...') || urlObj.pathname.includes('oudinary')) {
       // Try to extract valid part before truncation
-      const validPath = urlObj.pathname.substring(0, urlObj.pathname.indexOf('...'));
-      if (validPath.length > 0) {
-        urlObj.pathname = validPath;
+      const truncationPos = urlObj.pathname.indexOf('...');
+      if (truncationPos > 0) {
+        urlObj.pathname = urlObj.pathname.substring(0, truncationPos);
         cleaned = urlObj.toString();
       } else {
         return null;
       }
     }
     
+    // Final validation: check if it's a valid Cloudinary URL
+    if (cleaned.includes('res.cloudinary.com')) {
+      // Cloudinary URL should have format: https://res.cloudinary.com/{cloud_name}/{resource_type}/upload/{version}/{folder}/{filename}
+      // But be lenient - accept URLs even without file extension if they have valid structure
+      if (!/^https:\/\/res\.cloudinary\.com\/[^\/]+\/[^\/]+\/upload/.test(cleaned)) {
+        return null;
+      }
+      // If URL doesn't have file extension, it might be incomplete but still valid for some cases
+      // We'll accept it if it has at least the basic Cloudinary structure
+    }
+    
     return cleaned;
   } catch (e) {
-    // URL parsing failed - try simpler validation
-    // Check if it looks like a valid URL
-    if (cleaned.match(/^https?:\/\/[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/)) {
-      // Basic URL format is OK, but couldn't parse - might be valid
-      // Try to extract just the domain and basic path
-      const simpleMatch = cleaned.match(/^(https?:\/\/[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}[^\s"']*)/);
-      if (simpleMatch) {
-        return simpleMatch[1];
-      }
+    // URL parsing failed - try to extract valid part
+    // Check if it looks like a valid URL even if parsing failed
+    if (cleaned.match(/^https:\/\/res\.cloudinary\.com\/[^\/]+\/[^\/]+\/upload/)) {
+      // Looks like valid Cloudinary URL structure, return it
+      return cleaned;
     }
     return null;
   }

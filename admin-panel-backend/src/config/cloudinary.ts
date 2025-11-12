@@ -10,8 +10,8 @@ if (process.env.CLOUDINARY_URL) {
 } else {
   cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME || 'dgv0rxd60',
-    api_key: process.env.CLOUDINARY_API_KEY || '167167873792366',
-    api_secret: process.env.CLOUDINARY_API_SECRET || 'uSVafj2g3YqlNqJP_bALPZ8pVA8',
+    api_key: process.env.CLOUDINARY_API_KEY || '141613625537469',
+    api_secret: process.env.CLOUDINARY_API_SECRET || 'GgziMAcVfQvOGD44Yj0OlNqitPg',
   });
 }
 
