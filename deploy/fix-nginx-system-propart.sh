@@ -35,22 +35,22 @@ fi
 if [ ! -f "/etc/nginx/sites-available/${DOMAIN}" ]; then
     echo "📝 Створення Nginx конфігурації для ${DOMAIN}..."
     
-    cat > /etc/nginx/sites-available/${DOMAIN} << NGINXEOF
+    cat > /etc/nginx/sites-available/${DOMAIN} << 'NGINXEOF'
 server {
     listen 80;
-    server_name ${DOMAIN};
+    server_name system.pro-part.online;
     
     # Redirect HTTP to HTTPS
-    return 301 https://\$server_name\$request_uri;
+    return 301 https://$server_name$request_uri;
 }
 
 server {
     listen 443 ssl http2;
-    server_name ${DOMAIN};
+    server_name system.pro-part.online;
 
     # SSL сертифікат (буде встановлено certbot)
-    ssl_certificate /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
+    ssl_certificate /etc/letsencrypt/live/system.pro-part.online/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/system.pro-part.online/privkey.pem;
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_ciphers HIGH:!aNULL:!MD5;
 
@@ -58,23 +58,23 @@ server {
     location / {
         proxy_pass http://localhost:3002;
         proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-        proxy_cache_bypass \$http_upgrade;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
     }
 
     # Backend API
     location /api {
         proxy_pass http://localhost:4001;
         proxy_http_version 1.1;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
     }
 }
 NGINXEOF
@@ -100,32 +100,32 @@ if [ ! -d "/etc/letsencrypt/live/${DOMAIN}" ]; then
         echo "   💡 Створюємо тимчасову конфігурацію без SSL..."
         
         # Тимчасова конфігурація без SSL
-        cat > /etc/nginx/sites-available/${DOMAIN} << NGINXEOF
+        cat > /etc/nginx/sites-available/${DOMAIN} << 'NGINXEOF'
 server {
     listen 80;
-    server_name ${DOMAIN};
+    server_name system.pro-part.online;
 
     # Frontend
     location / {
         proxy_pass http://localhost:3002;
         proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
-        proxy_cache_bypass \$http_upgrade;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_cache_bypass $http_upgrade;
     }
 
     # Backend API
     location /api {
         proxy_pass http://localhost:4001;
         proxy_http_version 1.1;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
     }
 }
 NGINXEOF
