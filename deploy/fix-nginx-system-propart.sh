@@ -31,11 +31,20 @@ if [ -L "/etc/nginx/sites-enabled/default" ]; then
     echo "   ✅ Видалено"
 fi
 
-# Перевіряємо чи є конфігурація для system.pro-part.online
-if [ ! -f "/etc/nginx/sites-available/${DOMAIN}" ]; then
-    echo "📝 Створення Nginx конфігурації для ${DOMAIN}..."
-    
-    cat > /etc/nginx/sites-available/${DOMAIN} << 'NGINXEOF'
+# Видаляємо стару конфігурацію якщо вона є (щоб перезаписати)
+if [ -f "/etc/nginx/sites-available/${DOMAIN}" ]; then
+    echo "🗑️  Видаляємо стару конфігурацію..."
+    rm -f /etc/nginx/sites-available/${DOMAIN}
+fi
+
+# Видаляємо симлінк якщо є
+if [ -L "/etc/nginx/sites-enabled/${DOMAIN}" ]; then
+    rm -f /etc/nginx/sites-enabled/${DOMAIN}
+fi
+
+echo "📝 Створення Nginx конфігурації для ${DOMAIN}..."
+
+cat > /etc/nginx/sites-available/${DOMAIN} << 'NGINXEOF'
 server {
     listen 80;
     server_name system.pro-part.online;
@@ -59,7 +68,7 @@ server {
         proxy_pass http://localhost:3002;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
+        proxy_set_header Connection upgrade;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -78,19 +87,12 @@ server {
     }
 }
 NGINXEOF
-    echo "   ✅ Створено"
-else
-    echo "   ⊘ Конфігурація вже існує"
-fi
+echo "   ✅ Створено"
 
 # Активуємо конфігурацію
-if [ ! -L "/etc/nginx/sites-enabled/${DOMAIN}" ]; then
-    echo "🔗 Активуємо конфігурацію..."
-    ln -s /etc/nginx/sites-available/${DOMAIN} /etc/nginx/sites-enabled/
-    echo "   ✅ Активовано"
-else
-    echo "   ⊘ Конфігурація вже активна"
-fi
+echo "🔗 Активуємо конфігурацію..."
+ln -s /etc/nginx/sites-available/${DOMAIN} /etc/nginx/sites-enabled/
+echo "   ✅ Активовано"
 
 # Перевіряємо чи є SSL сертифікат
 if [ ! -d "/etc/letsencrypt/live/${DOMAIN}" ]; then
@@ -110,7 +112,7 @@ server {
         proxy_pass http://localhost:3002;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
+        proxy_set_header Connection upgrade;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
