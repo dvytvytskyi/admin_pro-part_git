@@ -374,7 +374,7 @@ router.get('/data', authenticateApiKeyWithSecret, async (req: AuthRequest, res) 
           balconySizeSqft: u.balconySize ? Conversions.sqmToSqft(u.balconySize) : null,
           planImage: u.planImage,
         })) || [],
-        photos: p.photos || [],
+        photos: parseImages(p.photos) || [],
         createdAt: p.createdAt,
         updatedAt: p.updatedAt,
       };

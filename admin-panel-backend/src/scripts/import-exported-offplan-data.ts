@@ -18,6 +18,127 @@ interface ImportResult {
   errors: string[];
 }
 
+// Функція для валідації та очищення URL images
+function validateAndCleanImageUrl(url: string): string | null {
+  if (!url || typeof url !== 'string') return null;
+  
+  let cleaned = url.trim();
+  
+  // Remove null/undefined strings
+  if (cleaned === 'null' || cleaned === 'undefined' || cleaned === '') return null;
+  
+  // Remove truncation markers
+  if (cleaned.includes('...')) {
+    cleaned = cleaned.substring(0, cleaned.indexOf('...'));
+  }
+  
+  // Fix truncated cloudinary.com - skip corrupted URLs
+  if (cleaned.includes('oudinary.com')) {
+    return null; // Skip corrupted URLs
+  }
+  
+  // Remove duplicate cloudinary.com patterns
+  if (cleaned.match(/res\.cloudinary\.com.*res\.cloudinary\.com/)) {
+    const firstMatch = cleaned.match(/https:\/\/res\.cloudinary\.com\/[^\s"']+/);
+    if (firstMatch) {
+      cleaned = firstMatch[0];
+    } else {
+      return null;
+    }
+  }
+  
+  // Find first valid HTTPS URL
+  const httpsUrlMatch = cleaned.match(/https:\/\/res\.cloudinary\.com\/[^\s"']+/);
+  if (httpsUrlMatch) {
+    cleaned = httpsUrlMatch[0];
+  } else {
+    // Try generic HTTPS URL
+    const genericHttpsMatch = cleaned.match(/https:\/\/[^\s"']+/);
+    if (genericHttpsMatch) {
+      cleaned = genericHttpsMatch[0];
+    } else {
+      return null;
+    }
+  }
+  
+  // Validate URL format
+  try {
+    const urlObj = new URL(cleaned);
+    if (!['http:', 'https:'].includes(urlObj.protocol)) return null;
+    if (!urlObj.hostname || urlObj.hostname.length === 0) return null;
+    
+    // Ensure hostname is valid (not truncated)
+    if (urlObj.hostname.includes('...') || urlObj.hostname.endsWith('.') || urlObj.hostname.includes('oudinary')) {
+      return null;
+    }
+    
+    // Ensure pathname doesn't contain truncation markers
+    if (urlObj.pathname.includes('...') || urlObj.pathname.includes('oudinary')) {
+      const truncationPos = urlObj.pathname.indexOf('...');
+      if (truncationPos > 0) {
+        urlObj.pathname = urlObj.pathname.substring(0, truncationPos);
+        cleaned = urlObj.toString();
+      } else {
+        return null;
+      }
+    }
+    
+    return cleaned;
+  } catch (e) {
+    // URL parsing failed
+    return null;
+  }
+}
+
+// Функція для очищення масиву images
+function cleanAreaImages(images: any): string[] {
+  if (!Array.isArray(images)) return [];
+  
+  const cleaned: string[] = [];
+  for (const img of images) {
+    const validUrl = validateAndCleanImageUrl(img);
+    if (validUrl) {
+      cleaned.push(validUrl);
+    }
+  }
+  
+  return cleaned;
+}
+
+// Функція для обробки photos properties (може бути масив об'єктів або масив рядків)
+function cleanPropertyPhotos(photos: any): string[] {
+  if (!photos) return [];
+  if (!Array.isArray(photos)) return [];
+  
+  const cleaned: string[] = [];
+  for (const photo of photos) {
+    let url: string | null = null;
+    
+    // Якщо це об'єкт з полем src
+    if (typeof photo === 'object' && photo !== null && photo.src) {
+      url = typeof photo.src === 'string' ? photo.src : null;
+    }
+    // Якщо це об'єкт з полем url
+    else if (typeof photo === 'object' && photo !== null && photo.url) {
+      url = typeof photo.url === 'string' ? photo.url : null;
+    }
+    // Якщо це рядок
+    else if (typeof photo === 'string') {
+      url = photo;
+    }
+    
+    // Валідуємо та очищаємо URL
+    if (url) {
+      const validUrl = validateAndCleanImageUrl(url);
+      if (validUrl) {
+        cleaned.push(validUrl);
+      }
+    }
+  }
+  
+  return cleaned;
+}
+
 async function importExportedData() {
   const results: Record<string, ImportResult> = {};
   
@@ -130,6 +251,9 @@ async function importExportedData() {
           }
         }
         
+        let corruptedUrlsCount = 0;
+        let validUrlsCount = 0;
+        
         for (const area of areasData) {
           // Спочатку шукаємо за старим cityId через маппінг
           const newCityId = cityMapping[area.cityId] || area.cityId;
@@ -137,11 +261,38 @@ async function importExportedData() {
           if (city) {
             const existing = await areaRepo.findOne({ where: { id: area.id } });
             if (!existing) {
-              const areaToSave = {
-                ...area,
-                cityId: city.id,
-              };
-              await areaRepo.save(areaToSave);
+              // Очистити images перед збереженням
+              const cleanedImages = cleanAreaImages(area.images);
+              
+              // Підрахунок для статистики
+              if (area.images && Array.isArray(area.images)) {
+                for (const img of area.images) {
+                  if (typeof img === 'string' && (img.includes('...') || img.includes('oudinary.com'))) {
+                    corruptedUrlsCount++;
+                  } else {
+                    validUrlsCount++;
+                  }
+                }
+              }
+              
+              // Використовувати raw SQL для збереження масиву (як у міграції)
+              // Це запобігає проблемам з TypeORM simple-array
+              await AppDataSource.query(
+                `INSERT INTO areas (id, "cityId", "nameEn", "nameRu", "nameAr", images, description, infrastructure)
+                 VALUES ($1, $2, $3, $4, $5, $6::text[], $7::jsonb, $8::jsonb)
+                 ON CONFLICT (id) DO NOTHING`,
+                [
+                  area.id,
+                  city.id,
+                  area.nameEn,
+                  area.nameRu,
+                  area.nameAr,
+                  cleanedImages.length > 0 ? cleanedImages : null,
+                  area.description || null,
+                  area.infrastructure || null,
+                ]
+              );
+              
               imported++;
               if (imported % 100 === 0) {
                 console.log(`   ⏳ Прогрес: ${imported} areas імпортовано...`);
@@ -150,6 +301,13 @@ async function importExportedData() {
           } else {
             skipped++;
           }
+        }
+        
+        if (corruptedUrlsCount > 0) {
+          console.log(`   ⚠️  Знайдено ${corruptedUrlsCount} пошкоджених URL, виправлено/видалено`);
+        }
+        if (validUrlsCount > 0) {
+          console.log(`   ✅ Валідних URL: ${validUrlsCount}`);
         }
         results.areas = { success: true, count: imported, errors: [] };
         console.log(`   ✅ Areas: ${imported} нових, ${skipped} пропущено (немає city), ${await areaRepo.count()} всього`);
@@ -315,10 +473,14 @@ async function importExportedData() {
                 }
               }
               
+              // Обробляємо photos (може бути масив об'єктів або масив рядків)
+              const cleanedPhotos = cleanPropertyPhotos(p.photos);
+              
               // Переконатися, що propertyType = 'off-plan'
               const propertyData = {
                 ...p,
                 propertyType: PropertyType.OFF_PLAN,
+                photos: cleanedPhotos.length > 0 ? cleanedPhotos : [],
                 areaId: areaId || p.areaId,
                 countryId: countryId || p.countryId,
                 cityId: cityId || p.cityId,
