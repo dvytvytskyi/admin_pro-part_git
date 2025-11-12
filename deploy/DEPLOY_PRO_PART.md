@@ -1,8 +1,8 @@
-# Деплой admin_pro-part на app.pro-part.online
+# Деплой admin_pro-part на system.pro-part.online
 
 ## Серверні дані
 - **IP**: 135.181.201.185
-- **Домен**: app.pro-part.online
+- **Домен**: system.pro-part.online
 - **Root Password**: FNrtVkfCRwgW
 - **Проект**: admin_pro-part
 - **Репозиторій**: https://github.com/dvytvytskyi/admin_pro-part_git.git
@@ -88,7 +88,7 @@ nano /opt/admin-pro-part/admin-panel/.env.production
 ```
 
 ```env
-NEXT_PUBLIC_API_URL=https://app.pro-part.online/api
+NEXT_PUBLIC_API_URL=https://system.pro-part.online/api
 ```
 
 ### Крок 4: Створення docker-compose.prod.yml
@@ -168,16 +168,16 @@ nano /etc/nginx/sites-available/app.pro-part.online
 ```nginx
 server {
     listen 80;
-    server_name app.pro-part.online;
+    server_name system.pro-part.online;
     return 301 https://$server_name$request_uri;
 }
 
 server {
     listen 443 ssl http2;
-    server_name app.pro-part.online;
+    server_name system.pro-part.online;
 
-    ssl_certificate /etc/letsencrypt/live/app.pro-part.online/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/app.pro-part.online/privkey.pem;
+    ssl_certificate /etc/letsencrypt/live/system.pro-part.online/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/system.pro-part.online/privkey.pem;
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_ciphers HIGH:!aNULL:!MD5;
 
@@ -217,7 +217,7 @@ systemctl reload nginx
 ### Крок 6: SSL сертифікат
 
 ```bash
-certbot --nginx -d app.pro-part.online --non-interactive --agree-tos --email admin@pro-part.online
+certbot --nginx -d system.pro-part.online --non-interactive --agree-tos --email admin@pro-part.online
 ```
 
 ### Крок 7: Запуск контейнерів
@@ -294,19 +294,19 @@ docker exec admin-pro-part-db pg_dump -U admin admin_panel_propart > /opt/admin-
 
 ## DNS налаштування
 
-Переконайтеся, що DNS для `app.pro-part.online` вказує на `135.181.201.185`:
+Переконайтеся, що DNS для `system.pro-part.online` вказує на `135.181.201.185`:
 
 ```
-A запис: app.pro-part.online -> 135.181.201.185
+A запис: system.pro-part.online -> 135.181.201.185
 ```
 
 ---
 
 ## Перевірка після деплою
 
-1. ✅ Перевірте доступність: https://app.pro-part.online
-2. ✅ Перевірте API: https://app.pro-part.online/api/health
-3. ✅ Перевірте логін: https://app.pro-part.online/login
+1. ✅ Перевірте доступність: https://system.pro-part.online
+2. ✅ Перевірте API: https://system.pro-part.online/api/health
+3. ✅ Перевірте логін: https://system.pro-part.online/login
 4. ✅ Перевірте логи: `docker-compose -f docker-compose.prod.yml logs`
 
 ---

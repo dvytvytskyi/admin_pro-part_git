@@ -243,7 +243,7 @@ echo "🔒 Налаштування SSL (Let's Encrypt)..."
 # Отримуємо SSL сертифікат
 if [ ! -d "/etc/letsencrypt/live/${DOMAIN}" ]; then
     echo "   Отримання SSL сертифікату..."
-    certbot --nginx -d ${DOMAIN} --non-interactive --agree-tos --email admin@pro-part.online || echo "   ⚠️  Не вдалося отримати SSL (можливо домен не налаштований)"
+    certbot --nginx -d ${DOMAIN} --non-interactive --agree-tos --email admin@pro-part.online --redirect || echo "   ⚠️  Не вдалося отримати SSL (можливо домен не налаштований)"
 else
     echo "   ⊘ SSL сертифікат вже існує"
 fi
