@@ -55,7 +55,7 @@ git pull origin main || {
 
 echo ""
 echo "🔨 Перебудова бекенду..."
-docker-compose -f docker-compose.prod.yml build admin-panel-backend || {
+docker-compose -f docker-compose.prod.yml build --no-cache admin-panel-backend || {
     echo "❌ Помилка перебудови бекенду"
     exit 1
 }
