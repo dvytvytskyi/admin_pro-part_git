@@ -319,7 +319,7 @@ export default function EditPropertyPage() {
         if (typeof photo === 'string') return photo;
         if (typeof photo === 'object' && photo !== null && photo.url) return String(photo.url);
         return null;
-      }).filter((photo): photo is string => photo !== null);
+      }).filter((photo: string | null): photo is string => photo !== null);
       setPhotos(cleanedPhotos)
       
       // Set conversion values and update form fields
