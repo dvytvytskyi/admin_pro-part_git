@@ -44,6 +44,7 @@
     "check:secondary-duplicates": "ts-node-dev src/scripts/check-secondary-duplicates.ts",
     "remove:secondary-duplicates": "ts-node-dev src/scripts/remove-secondary-duplicates.ts",
     "migrate:area-images": "ts-node-dev src/scripts/migrate-area-images-to-cloudinary.ts",
+    "migrate:properties-photos": "ts-node-dev src/scripts/migrate-properties-photos-to-cloudinary.ts",
     "fix:corrupted-area-images": "ts-node-dev src/scripts/fix-corrupted-area-images-urls.ts",
     "count:offplan-areas": "ts-node-dev src/scripts/count-offplan-by-area.ts",
     "list:all-areas": "ts-node-dev src/scripts/list-all-areas.ts",
@@ -52,7 +53,11 @@
     "cleanup:areas": "ts-node-dev src/scripts/cleanup-unused-areas.ts",
     "check:no-coordinates": "ts-node-dev src/scripts/check-properties-without-coordinates.ts",
     "import:exported-offplan": "ts-node-dev src/scripts/import-exported-offplan-data.ts",
-    "optimize:facilities": "ts-node-dev src/scripts/optimize-facilities.ts"
+    "clear:imported-data": "ts-node-dev src/scripts/clear-imported-data.ts",
+    "create:area-cloudinary-mapping": "ts-node-dev src/scripts/create-area-cloudinary-mapping.ts",
+    "optimize:facilities": "ts-node-dev src/scripts/optimize-facilities.ts",
+    "clean:corrupted-urls": "ts-node-dev src/scripts/clean-all-corrupted-urls.ts",
+    "fix:properties-photos": "ts-node-dev src/scripts/fix-properties-photos.ts"
   },
   "keywords": [],
   "author": "",

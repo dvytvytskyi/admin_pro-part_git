@@ -281,7 +281,11 @@ export default function EditPropertyPage() {
       reset({
         propertyType: property.propertyType,
         name: property.name || '',
-        photos: property.photos || [],
+        photos: (property.photos || []).map((photo: any) => {
+          if (typeof photo === 'string') return photo;
+          if (typeof photo === 'object' && photo !== null && photo.url) return String(photo.url);
+          return null;
+        }).filter((photo): photo is string => photo !== null),
         countryId: property.countryId || '',
         cityId: property.cityId || '',
         areaId: property.areaId || '',
@@ -309,8 +313,14 @@ export default function EditPropertyPage() {
             }),
       } as PropertyFormData)
 
-      // Set photos
-      setPhotos(property.photos || [])
+      // Set photos - ensure they're strings, not objects
+      // Property photos should be reelly URLs (NOT cloudinary - only area images use cloudinary)
+      const cleanedPhotos = (property.photos || []).map((photo: any) => {
+        if (typeof photo === 'string') return photo;
+        if (typeof photo === 'object' && photo !== null && photo.url) return String(photo.url);
+        return null;
+      }).filter((photo): photo is string => photo !== null);
+      setPhotos(cleanedPhotos)
       
       // Set conversion values and update form fields
       if (property.priceFrom) {

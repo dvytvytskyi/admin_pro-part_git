@@ -7,6 +7,122 @@ import { Conversions } from '../utils/conversions';
 
 const router = express.Router();
 
+// Helper function to clean and normalize photos array
+// Ensures photos are always strings, not objects
+// Property photos should remain on reelly (NOT migrated to cloudinary - only area images use cloudinary)
+function cleanPhotos(photos: any): string[] {
+  if (!photos) return [];
+  
+  // If already an array
+  if (Array.isArray(photos)) {
+    const cleaned = photos
+      .map((photo, index) => {
+        // Skip numbers (they shouldn't be in photos array)
+        if (typeof photo === 'number') {
+          if (process.env.NODE_ENV === 'development') {
+            console.warn(`[cleanPhotos] Number found at index ${index}: ${photo}, skipping`);
+          }
+          return null;
+        }
+        
+        // If it's already a string URL, return it
+        if (typeof photo === 'string') {
+          const trimmed = photo.trim();
+          // Skip empty strings or strings that are just "{}"
+          if (trimmed.length === 0 || trimmed === '{}') {
+            return null;
+          }
+          return trimmed;
+        }
+        
+        // If it's an object with url property, extract the URL
+        if (typeof photo === 'object' && photo !== null) {
+          // Check if it's an empty object {}
+          if (Object.keys(photo).length === 0) {
+            if (process.env.NODE_ENV === 'development') {
+              console.warn(`[cleanPhotos] Empty object {} found at index ${index}, skipping`);
+            }
+            return null;
+          }
+          // Try to extract URL from object
+          if (photo.url && typeof photo.url === 'string') {
+            return photo.url.trim();
+          }
+          // Try to stringify and parse if it's a JSON-like object
+          try {
+            const str = JSON.stringify(photo);
+            if (str === '{}') return null;
+            // If it looks like it might have been a URL stringified
+            if (str.includes('http')) {
+              const match = str.match(/https?:\/\/[^\s"']+/);
+              if (match) return match[0];
+            }
+          } catch (e) {
+            // Ignore JSON errors
+          }
+        }
+        
+        // Try to convert to string as last resort
+        if (photo !== null && photo !== undefined) {
+          const str = String(photo).trim();
+          // Skip if it's just "{}" or "[object Object]"
+          if (str === '{}' || str === '[object Object]') {
+            if (process.env.NODE_ENV === 'development') {
+              console.warn(`[cleanPhotos] Invalid photo value at index ${index}: ${str}`);
+            }
+            return null;
+          }
+          // Only return if it looks like a URL
+          if (str.startsWith('http://') || str.startsWith('https://')) {
+            return str;
+          }
+        }
+        return null;
+      })
+      .filter((url): url is string => {
+        if (!url || url.length === 0) return false;
+        // Filter out invalid URLs
+        if (url === '{}' || url === '[object Object]') return false;
+        // Must be a valid URL starting with http
+        return url.startsWith('http://') || url.startsWith('https://');
+      });
+    
+    if (process.env.NODE_ENV === 'development' && cleaned.length !== photos.length) {
+      console.warn(`[cleanPhotos] Filtered ${photos.length - cleaned.length} invalid photos from array`);
+    }
+    
+    return cleaned;
+  }
+  
+  // If it's a string, try to parse it
+  if (typeof photos === 'string') {
+    // Try JSON array first
+    if (photos.startsWith('[') && photos.endsWith(']')) {
+      try {
+        const parsed = JSON.parse(photos);
+        if (Array.isArray(parsed)) {
+          return cleanPhotos(parsed);
+        }
+      } catch (e) {
+        // Not valid JSON, continue
+      }
+    }
+    // Try comma-separated (TypeORM simple-array format)
+    if (photos.includes(',')) {
+      return photos
+        .split(',')
+        .map(p => p.trim())
+        .filter(p => p.length > 0 && (p.startsWith('http://') || p.startsWith('https://')));
+    }
+    // Single URL
+    if (photos.trim().length > 0 && (photos.startsWith('http://') || photos.startsWith('https://'))) {
+      return [photos.trim()];
+    }
+  }
+  
+  return [];
+}
+
 // Support both JWT and API Key/Secret authentication
 router.use((req: AuthRequest, res, next) => {
   const apiKey = req.headers['x-api-key'] as string;
@@ -216,8 +332,35 @@ router.get('/', async (req: AuthRequest, res) => {
         areaField = cityName ? `${areaName}, ${cityName}` : areaName;
       }
 
+      // Clean and normalize photos to ensure they're always strings, not objects
+      const cleanedPhotos = cleanPhotos(p.photos);
+      
+      // Debug logging - always log if there are issues
+      if (p.photos && p.photos.length > 0) {
+        const hasIssues = p.photos.some((photo: any) => {
+          if (typeof photo === 'number') return true;
+          if (typeof photo === 'object' && photo !== null) return true;
+          if (typeof photo === 'string' && (photo.trim() === '{}' || (!photo.startsWith('http://') && !photo.startsWith('https://')))) {
+            return true;
+          }
+          return false;
+        });
+        
+        if (hasIssues || cleanedPhotos.length !== p.photos.length) {
+          console.warn(`[Properties API] Property ${p.id} (${p.name}) has photo issues:`, {
+            original: p.photos,
+            cleaned: cleanedPhotos,
+            originalLength: p.photos.length,
+            cleanedLength: cleanedPhotos.length,
+            hasNumbers: p.photos.some((photo: any) => typeof photo === 'number'),
+            hasObjects: p.photos.some((photo: any) => typeof photo === 'object' && photo !== null),
+          });
+        }
+      }
+
       return {
         ...p,
+        photos: cleanedPhotos, // Override photos with cleaned version
         area: areaField,
         priceFromAED: p.priceFrom ? Conversions.usdToAed(p.priceFrom) : null,
         priceAED: p.price ? Conversions.usdToAed(p.price) : null,
@@ -371,7 +514,21 @@ router.get('/:id', async (req, res) => {
     where: { id: req.params.id },
     relations: ['country', 'city', 'area', 'developer', 'facilities', 'units'],
   });
-  res.json(successResponse(property));
+  
+  if (!property) {
+    return res.status(404).json({
+      success: false,
+      message: 'Property not found',
+    });
+  }
+  
+  // Clean and normalize photos to ensure they're always strings, not objects
+  const cleanedProperty = {
+    ...property,
+    photos: cleanPhotos(property.photos),
+  };
+  
+  res.json(successResponse(cleanedProperty));
 });
 
 router.post('/', async (req, res) => {
@@ -558,6 +715,11 @@ router.post('/', async (req, res) => {
       }));
     }
     
+    // Clean photos before saving to ensure they're always valid URLs
+    if (propertyData.photos !== undefined) {
+      propertyData.photos = cleanPhotos(propertyData.photos);
+    }
+    
     const property = await AppDataSource.getRepository(Property).save(propertyData);
     
     // Fetch with relations to return complete data
@@ -566,7 +728,20 @@ router.post('/', async (req, res) => {
       relations: ['country', 'city', 'area', 'developer', 'facilities', 'units'],
     });
     
-    res.json(successResponse(completeProperty));
+    if (!completeProperty) {
+      return res.status(404).json({
+        success: false,
+        message: 'Property not found after creation',
+      });
+    }
+    
+    // Clean photos in response as well
+    const cleanedProperty = {
+      ...completeProperty,
+      photos: cleanPhotos(completeProperty.photos),
+    };
+    
+    res.json(successResponse(cleanedProperty));
   } catch (error: any) {
     console.error('Error creating property:', error);
     res.status(500).json({ 
@@ -578,12 +753,41 @@ router.post('/', async (req, res) => {
 });
 
 router.patch('/:id', async (req, res) => {
-  await AppDataSource.getRepository(Property).update(req.params.id, req.body);
-  const property = await AppDataSource.getRepository(Property).findOne({
-    where: { id: req.params.id },
-    relations: ['facilities', 'units'],
-  });
-  res.json(successResponse(property));
+  try {
+    const updateData = { ...req.body };
+    
+    // Clean photos before updating to ensure they're always valid URLs
+    if (updateData.photos !== undefined) {
+      updateData.photos = cleanPhotos(updateData.photos);
+    }
+    
+    await AppDataSource.getRepository(Property).update(req.params.id, updateData);
+    const property = await AppDataSource.getRepository(Property).findOne({
+      where: { id: req.params.id },
+      relations: ['country', 'city', 'area', 'developer', 'facilities', 'units'],
+    });
+    
+    if (!property) {
+      return res.status(404).json({
+        success: false,
+        message: 'Property not found',
+      });
+    }
+    
+    // Clean photos in response as well
+    const cleanedProperty = {
+      ...property,
+      photos: cleanPhotos(property.photos),
+    };
+    
+    res.json(successResponse(cleanedProperty));
+  } catch (error: any) {
+    console.error('Error updating property:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to update property',
+    });
+  }
 });
 
 router.delete('/:id', async (req, res) => {

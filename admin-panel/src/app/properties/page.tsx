@@ -229,7 +229,17 @@ export default function PropertiesPage() {
                     >
                       <TableCell className="px-5 py-4 sm:px-6 text-start">
                         <div className="flex items-center gap-3">
-                          {property.photos?.[0] ? (
+                          {(() => {
+                            // Ensure photo is a string, not an object
+                            // Property photos should be reelly URLs (NOT cloudinary - only area images use cloudinary)
+                            const firstPhoto = property.photos?.[0];
+                            const photoUrl = typeof firstPhoto === 'string' 
+                              ? firstPhoto 
+                              : (typeof firstPhoto === 'object' && firstPhoto !== null && firstPhoto.url)
+                                ? String(firstPhoto.url)
+                                : null;
+                            
+                            return photoUrl ? (
                             <div className="relative w-12 h-12 overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800">
                               {/* Skeleton loader - show while loading (undefined or true) */}
                               {imageLoadingStates[property.id] !== false && (
@@ -242,29 +252,52 @@ export default function PropertiesPage() {
                                   <div className="absolute inset-0 bg-gray-300/50 dark:bg-gray-700/50 animate-pulse" />
                                 </div>
                               )}
-                              <Image
-                                width={48}
-                                height={48}
-                                src={property.photos[0]}
-                                alt={property.name || 'Property'}
-                                className={`object-cover w-full h-full transition-opacity duration-300 ${
-                                  imageLoadingStates[property.id] === false ? 'opacity-100' : 'opacity-0'
-                                }`}
-                                onLoad={() => {
-                                  setImageLoadingStates((prev) => ({
-                                    ...prev,
-                                    [property.id]: false,
-                                  }))
-                                }}
-                                onError={() => {
-                                  setImageLoadingStates((prev) => ({
-                                    ...prev,
-                                    [property.id]: false,
-                                  }))
-                                }}
-                              />
+                              {photoUrl.startsWith('https://api.reelly.io') ? (
+                                // Use regular img tag for reelly URLs to avoid Next.js Image optimization issues
+                                <img
+                                  src={photoUrl}
+                                  alt={property.name || 'Property'}
+                                  className={`object-cover w-full h-full transition-opacity duration-300 ${
+                                    imageLoadingStates[property.id] === false ? 'opacity-100' : 'opacity-0'
+                                  }`}
+                                  onLoad={() => {
+                                    setImageLoadingStates((prev) => ({
+                                      ...prev,
+                                      [property.id]: false,
+                                    }))
+                                  }}
+                                  onError={() => {
+                                    setImageLoadingStates((prev) => ({
+                                      ...prev,
+                                      [property.id]: false,
+                                    }))
+                                  }}
+                                />
+                              ) : (
+                                <Image
+                                  width={48}
+                                  height={48}
+                                  src={photoUrl}
+                                  alt={property.name || 'Property'}
+                                  className={`object-cover w-full h-full transition-opacity duration-300 ${
+                                    imageLoadingStates[property.id] === false ? 'opacity-100' : 'opacity-0'
+                                  }`}
+                                  onLoad={() => {
+                                    setImageLoadingStates((prev) => ({
+                                      ...prev,
+                                      [property.id]: false,
+                                    }))
+                                  }}
+                                  onError={() => {
+                                    setImageLoadingStates((prev) => ({
+                                      ...prev,
+                                      [property.id]: false,
+                                    }))
+                                  }}
+                                />
+                              )}
                             </div>
-                          ) : (
+                            ) : (
                             <div className="w-12 h-12 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
                               <svg
                                 className="w-6 h-6 text-gray-400"
@@ -280,7 +313,8 @@ export default function PropertiesPage() {
                                 />
                               </svg>
                             </div>
-                          )}
+                          );
+                          })()}
                           <div>
                             <span className="block font-medium text-gray-800 text-theme-sm dark:text-white/90">
                               {property.name || 'Unnamed Property'}
