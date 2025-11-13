@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { redirectToLogin } from '@/utils/redirect'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api'
 
@@ -14,7 +15,19 @@ api.interceptors.request.use(
   (config) => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
     if (token) {
-      config.headers.Authorization = `Bearer ${token}`
+      // Перевіряємо, чи токен не порожній і не містить зайвих пробілів
+      const cleanToken = token.trim()
+      if (cleanToken) {
+        config.headers.Authorization = `Bearer ${cleanToken}`
+        // Діагностичне логування (тільки для розробки)
+        if (process.env.NODE_ENV === 'development') {
+          console.log('🔑 Token added to request:', cleanToken.substring(0, 20) + '...')
+        }
+      } else {
+        console.warn('⚠️ Empty token found in localStorage')
+      }
+    } else {
+      console.warn('⚠️ No token found in localStorage')
     }
     return config
   },
@@ -32,7 +45,7 @@ api.interceptors.response.use(
       // Don't redirect if we're already on login page
       if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
         console.warn('Authentication required, redirecting to login...');
-        window.location.href = '/login'
+        redirectToLogin();
       }
     }
     return Promise.reject(error)
