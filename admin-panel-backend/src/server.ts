@@ -85,10 +85,18 @@ console.log('📋 DATABASE_URL:', process.env.DATABASE_URL ? 'Set (hidden)' : 'N
 console.log('📊 Entities count:', entities.length);
 
 AppDataSource.initialize()
-  .then(() => {
+  .then(async () => {
     console.log('✅ Database connected');
     console.log('📊 Database entities loaded:', AppDataSource.entityMetadatas.length);
     console.log('🔍 Entity names:', AppDataSource.entityMetadatas.map(e => e.name).join(', '));
+    
+    // Тимчасово: синхронізуємо схему якщо ENABLE_SYNC=true
+    if (process.env.ENABLE_SYNC === 'true') {
+      console.log('🔄 Synchronizing database schema...');
+      await AppDataSource.synchronize();
+      console.log('✅ Database schema synchronized');
+    }
+    
     app.listen(PORT, () => {
       console.log(`🚀 Admin Panel Backend running on http://localhost:${PORT}`);
     });
