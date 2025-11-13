@@ -23,16 +23,14 @@ echo "🔨 Перебудова образу бекенду..."
 cd admin-panel-backend
 docker build -t admin-pro-part-backend:latest .
 
-# 4. Запустити контейнер
+# 4. Запустити контейнер (використовуємо host network)
 echo "🚀 Запуск нового контейнера..."
 cd ..
 docker run -d \
   --name admin-pro-part-backend \
-  --network admin-pro-part_admin-network \
-  -p 4001:4000 \
+  --network host \
   --env-file admin-panel-backend/.env \
   -e NODE_ENV=production \
-  -e DATABASE_URL=$(grep DATABASE_URL admin-panel-backend/.env | cut -d '=' -f2) \
   admin-pro-part-backend:latest
 
 # 5. Чекаємо поки таблиці створяться
@@ -63,11 +61,9 @@ docker build -t admin-pro-part-backend:latest .
 cd ..
 docker run -d \
   --name admin-pro-part-backend \
-  --network admin-pro-part_admin-network \
-  -p 4001:4000 \
+  --network host \
   --env-file admin-panel-backend/.env \
   -e NODE_ENV=production \
-  -e DATABASE_URL=$(grep DATABASE_URL admin-panel-backend/.env | cut -d '=' -f2) \
   admin-pro-part-backend:latest
 
 echo ""
