@@ -210,7 +210,7 @@ router.get('/data', authenticateApiKeyWithSecret, async (req: AuthRequest, res) 
         } : null,
         description: a.description || null,
         infrastructure: a.infrastructure || null,
-        images: a.images || null,
+        images: parseArray(a.images),
       })),
       developers: developers.map(d => ({
         id: d.id,
@@ -551,7 +551,7 @@ router.get('/areas', authenticateApiKeyWithSecret, async (req: AuthRequest, res)
         },
         description: (area as any).description || null,
         infrastructure: (area as any).infrastructure || null,
-        images: (area as any).images || null,
+        images: parseArray((area as any).images),
       };
     });
 
@@ -662,7 +662,7 @@ router.get('/developers', authenticateApiKeyWithSecret, async (req: AuthRequest,
         name: developer.name,
         logo: developer.logo || null,
         description: descriptionField,
-        images: developer.images || null,
+        images: parseArray(developer.images),
         projectsCount: {
           total: counts.total,
           offPlan: counts.offPlan,
