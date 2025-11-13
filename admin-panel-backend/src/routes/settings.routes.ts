@@ -13,14 +13,37 @@ const router = express.Router();
 // Helper function to parse PostgreSQL array string to JavaScript array
 const parseArray = (arr: any): string[] | null => {
   if (!arr) return null;
-  if (Array.isArray(arr)) return arr; // Already an array
+  if (Array.isArray(arr)) {
+    // Filter out invalid values and ensure all are valid URLs
+    return arr
+      .filter((item: any) => {
+        // Remove empty values, null, undefined, '{}', '[]'
+        if (!item || item === '{}' || item === '[]' || item === '') return false;
+        // Check if it's a string
+        if (typeof item !== 'string') return false;
+        // Check if it's a valid URL (starts with http/https)
+        return item.trim().startsWith('http://') || item.trim().startsWith('https://');
+      })
+      .map((item: string) => item.trim()); // Remove whitespace
+  }
   if (typeof arr === 'string') {
     // Parse PostgreSQL array format: {url1,url2,url3}
     if (arr.startsWith('{') && arr.endsWith('}')) {
-      return arr.slice(1, -1).split(',').map(url => url.trim()).filter(url => url.length > 0);
+      return arr.slice(1, -1)
+        .split(',')
+        .map(url => url.trim())
+        .filter(url => {
+          // Filter out empty values and ensure valid URLs
+          if (!url || url === '{}' || url === '[]' || url === '') return false;
+          return url.startsWith('http://') || url.startsWith('https://');
+        });
     }
-    // If it's a single URL string
-    return [arr];
+    // If it's a single URL string, validate it
+    const trimmed = arr.trim();
+    if (trimmed && (trimmed.startsWith('http://') || trimmed.startsWith('https://'))) {
+      return [trimmed];
+    }
+    return null;
   }
   return null;
 };
