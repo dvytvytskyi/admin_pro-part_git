@@ -14,6 +14,21 @@ import { authenticateApiKeyWithSecret, AuthRequest } from '../middleware/auth';
 
 const router = express.Router();
 
+// Helper function to parse PostgreSQL array string to JavaScript array
+const parseArray = (arr: any): string[] | null => {
+  if (!arr) return null;
+  if (Array.isArray(arr)) return arr; // Already an array
+  if (typeof arr === 'string') {
+    // Parse PostgreSQL array format: {url1,url2,url3}
+    if (arr.startsWith('{') && arr.endsWith('}')) {
+      return arr.slice(1, -1).split(',').map(url => url.trim()).filter(url => url.length > 0);
+    }
+    // If it's a single URL string
+    return [arr];
+  }
+  return null;
+};
+
 // GET /api/public/data - Get all public data (returns ALL properties from ALL areas, no filtering)
 router.get('/data', authenticateApiKeyWithSecret, async (req: AuthRequest, res) => {
   try {
@@ -442,7 +457,7 @@ router.get('/areas', authenticateApiKeyWithSecret, async (req: AuthRequest, res)
             } : null,
             description: areaRaw.description || null,
             infrastructure: areaRaw.infrastructure || null,
-            images: areaRaw.images || null,
+            images: parseArray(areaRaw.images),
           };
         });
       } else {
