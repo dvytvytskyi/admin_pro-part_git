@@ -21,17 +21,44 @@ const parseArray = (arr: any): string[] | null => {
         if (!item || item === '{}' || item === '[]' || item === '') return false;
         // Check if it's a string
         if (typeof item !== 'string') return false;
+        // Clean up: remove leading { if present
+        let cleaned = item.trim();
+        if (cleaned.startsWith('{')) {
+          cleaned = cleaned.slice(1).trim();
+        }
         // Check if it's a valid URL (starts with http/https)
-        return item.trim().startsWith('http://') || item.trim().startsWith('https://');
+        return cleaned.startsWith('http://') || cleaned.startsWith('https://');
       })
-      .map((item: string) => item.trim()); // Remove whitespace
+      .map((item: string) => {
+        // Clean up: remove leading { if present
+        let cleaned = item.trim();
+        if (cleaned.startsWith('{')) {
+          cleaned = cleaned.slice(1).trim();
+        }
+        // Remove trailing } if present (from malformed arrays)
+        if (cleaned.endsWith('}')) {
+          cleaned = cleaned.slice(0, -1).trim();
+        }
+        return cleaned;
+      });
   }
   if (typeof arr === 'string') {
     // Parse PostgreSQL array format: {url1,url2,url3}
     if (arr.startsWith('{') && arr.endsWith('}')) {
       return arr.slice(1, -1)
         .split(',')
-        .map(url => url.trim())
+        .map(url => {
+          // Clean up: remove leading { if present
+          let cleaned = url.trim();
+          if (cleaned.startsWith('{')) {
+            cleaned = cleaned.slice(1).trim();
+          }
+          // Remove trailing } if present
+          if (cleaned.endsWith('}')) {
+            cleaned = cleaned.slice(0, -1).trim();
+          }
+          return cleaned;
+        })
         .filter(url => {
           // Filter out empty values and ensure valid URLs
           if (!url || url === '{}' || url === '[]' || url === '') return false;
@@ -39,7 +66,15 @@ const parseArray = (arr: any): string[] | null => {
         });
     }
     // If it's a single URL string, validate it
-    const trimmed = arr.trim();
+    let trimmed = arr.trim();
+    // Clean up: remove leading { if present
+    if (trimmed.startsWith('{')) {
+      trimmed = trimmed.slice(1).trim();
+    }
+    // Remove trailing } if present
+    if (trimmed.endsWith('}')) {
+      trimmed = trimmed.slice(0, -1).trim();
+    }
     if (trimmed && (trimmed.startsWith('http://') || trimmed.startsWith('https://'))) {
       return [trimmed];
     }
