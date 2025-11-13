@@ -32,7 +32,8 @@ export default function SettingsPage() {
       if (!token) {
         console.warn('No token found, redirecting to login...');
         if (typeof window !== 'undefined') {
-          window.location.href = '/login';
+          const currentOrigin = window.location.origin;
+          window.location.href = `${currentOrigin}/login`;
         }
         return;
       }
@@ -43,7 +44,8 @@ export default function SettingsPage() {
           if (err.response?.status === 401) {
             console.warn('Unauthorized, redirecting to login...');
             if (typeof window !== 'undefined') {
-              window.location.href = '/login';
+              const currentOrigin = window.location.origin;
+              window.location.href = `${currentOrigin}/login`;
             }
           }
           return { data: { data: [] } };
@@ -489,7 +491,8 @@ function DevelopersTab({ developers, onReload }: any) {
       if (error.response?.status === 401 || error.response?.status === 403) {
         alert('Please log in to add developers')
         if (typeof window !== 'undefined') {
-          window.location.href = '/login'
+          const currentOrigin = window.location.origin;
+          window.location.href = `${currentOrigin}/login`;
         }
         return
       }

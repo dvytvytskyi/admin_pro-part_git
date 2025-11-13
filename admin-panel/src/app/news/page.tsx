@@ -14,14 +14,22 @@ export default function NewsPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
   useEffect(() => {
+    console.log('NewsPage mounted, loading news...')
     loadNews()
   }, [])
 
   const loadNews = async () => {
     setLoading(true)
     try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api'
+      console.log('🔍 Loading news from:', apiUrl)
+      console.log('🔍 API instance baseURL:', api.defaults.baseURL)
+      console.log('🔍 Token exists:', typeof window !== 'undefined' ? !!localStorage.getItem('token') : 'N/A')
+      
       const { data } = await api.get('/news')
+      console.log('✅ News API response:', data)
       const newsData = data.data || []
+      console.log('📰 News data count:', newsData.length)
       // Format dates and ensure proper structure
       const formattedNews = newsData.map((item: any) => ({
         ...item,
@@ -34,9 +42,13 @@ export default function NewsPage() {
           day: 'numeric' 
         }) : '-',
       }))
+      console.log('Formatted news count:', formattedNews.length)
       setNews(formattedNews)
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading news:', error)
+      console.error('Error response:', error.response?.data)
+      console.error('Error status:', error.response?.status)
+      alert(`Помилка завантаження новин: ${error.response?.data?.message || error.message || 'Невідома помилка'}`)
       setNews([])
     } finally {
       setLoading(false)

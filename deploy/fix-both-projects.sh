@@ -64,3 +64,5 @@ ssh_exec "tail -20 /var/log/nginx/error.log 2>/dev/null || echo '   Логи н�
 echo ""
 echo "✅ Діагностика завершена!"
 
+
+

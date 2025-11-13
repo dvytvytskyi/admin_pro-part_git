@@ -33,7 +33,8 @@ export default function IntegrationsPage() {
       if (!token) {
         console.warn('No token found, redirecting to login...')
         if (typeof window !== 'undefined') {
-          window.location.href = '/login'
+          const currentOrigin = window.location.origin;
+          window.location.href = `${currentOrigin}/login`;
         }
         return
       }
@@ -46,7 +47,8 @@ export default function IntegrationsPage() {
       if (error.response?.status === 401) {
         console.warn('Unauthorized, redirecting to login...')
         if (typeof window !== 'undefined') {
-          window.location.href = '/login'
+          const currentOrigin = window.location.origin;
+          window.location.href = `${currentOrigin}/login`;
         }
       }
     } finally {

@@ -53,7 +53,8 @@
     "import:areas": "ts-node-dev src/scripts/importDubaiAreas.ts",
     "import:facilities": "ts-node-dev src/scripts/importFacilities.ts",
     "import:districts": "ts-node-dev src/scripts/import-districts-data.ts",
-    "import:all": "ts-node-dev src/scripts/import-all-properties.ts"
+    "import:all": "ts-node-dev src/scripts/import-all-properties.ts",
+    "import:news": "ts-node-dev src/scripts/importNews.ts"
   },
   "keywords": [],
   "author": "",
