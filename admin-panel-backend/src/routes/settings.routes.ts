@@ -39,46 +39,60 @@ const parseArray = (arr: any): string[] | null => {
         if (cleaned.endsWith('}')) {
           cleaned = cleaned.slice(0, -1).trim();
         }
+        // Remove quotes if present
+        cleaned = cleaned.replace(/^["']|["']$/g, '');
         return cleaned;
       });
   }
   if (typeof arr === 'string') {
-    // Parse PostgreSQL array format: {url1,url2,url3}
-    if (arr.startsWith('{') && arr.endsWith('}')) {
-      return arr.slice(1, -1)
-        .split(',')
-        .map(url => {
-          // Clean up: remove leading { if present
-          let cleaned = url.trim();
-          if (cleaned.startsWith('{')) {
-            cleaned = cleaned.slice(1).trim();
-          }
-          // Remove trailing } if present
-          if (cleaned.endsWith('}')) {
-            cleaned = cleaned.slice(0, -1).trim();
-          }
-          return cleaned;
-        })
-        .filter(url => {
-          // Filter out empty values and ensure valid URLs
-          if (!url || url === '{}' || url === '[]' || url === '') return false;
-          return url.startsWith('http://') || url.startsWith('https://');
-        });
+    // Handle PostgreSQL array format: {"{url1","url2","url3}"} or {url1,url2,url3}
+    let cleaned = arr.trim();
+    
+    // Remove outer braces if present
+    if (cleaned.startsWith('{') && cleaned.endsWith('}')) {
+      cleaned = cleaned.slice(1, -1);
     }
-    // If it's a single URL string, validate it
-    let trimmed = arr.trim();
-    // Clean up: remove leading { if present
-    if (trimmed.startsWith('{')) {
-      trimmed = trimmed.slice(1).trim();
+    
+    // Handle JSON array format: ["url1","url2","url3"]
+    if (cleaned.startsWith('[') && cleaned.endsWith(']')) {
+      try {
+        const parsed = JSON.parse(arr);
+        if (Array.isArray(parsed)) {
+          return parsed
+            .filter((url: any) => {
+              if (!url || typeof url !== 'string') return false;
+              const trimmed = url.trim();
+              return trimmed.startsWith('http://') || trimmed.startsWith('https://');
+            })
+            .map((url: string) => url.trim().replace(/^["']|["']$/g, ''));
+        }
+      } catch (e) {
+        // Not valid JSON, continue with string parsing
+      }
     }
-    // Remove trailing } if present
-    if (trimmed.endsWith('}')) {
-      trimmed = trimmed.slice(0, -1).trim();
-    }
-    if (trimmed && (trimmed.startsWith('http://') || trimmed.startsWith('https://'))) {
-      return [trimmed];
-    }
-    return null;
+    
+    // Split by comma and clean each URL
+    return cleaned
+      .split(',')
+      .map(url => {
+        // Clean up: remove leading { if present
+        let trimmed = url.trim();
+        if (trimmed.startsWith('{')) {
+          trimmed = trimmed.slice(1).trim();
+        }
+        // Remove trailing } if present
+        if (trimmed.endsWith('}')) {
+          trimmed = trimmed.slice(0, -1).trim();
+        }
+        // Remove quotes
+        trimmed = trimmed.replace(/^["']|["']$/g, '');
+        return trimmed;
+      })
+      .filter(url => {
+        // Filter out empty values and ensure valid URLs
+        if (!url || url === '{}' || url === '[]' || url === '') return false;
+        return url.startsWith('http://') || url.startsWith('https://');
+      });
   }
   return null;
 };
