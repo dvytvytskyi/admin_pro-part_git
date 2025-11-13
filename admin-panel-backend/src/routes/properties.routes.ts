@@ -216,8 +216,24 @@ router.get('/', async (req: AuthRequest, res) => {
         areaField = cityName ? `${areaName}, ${cityName}` : areaName;
       }
 
+      // Фільтруємо фото: видаляємо порожні значення та невалідні URL
+      let filteredPhotos: string[] = [];
+      if (p.photos && Array.isArray(p.photos)) {
+        filteredPhotos = p.photos
+          .filter((photo: any) => {
+            // Видаляємо порожні значення, null, undefined, '{}', '[]'
+            if (!photo || photo === '{}' || photo === '[]' || photo === '') return false;
+            // Перевіряємо, чи це рядок
+            if (typeof photo !== 'string') return false;
+            // Перевіряємо, чи це валідний URL (починається з http/https)
+            return photo.trim().startsWith('http://') || photo.trim().startsWith('https://');
+          })
+          .map((photo: string) => photo.trim()); // Прибираємо пробіли
+      }
+
       return {
         ...p,
+        photos: filteredPhotos, // Замінюємо photos на відфільтровані
         area: areaField,
         priceFromAED: p.priceFrom ? Conversions.usdToAed(p.priceFrom) : null,
         priceAED: p.price ? Conversions.usdToAed(p.price) : null,
