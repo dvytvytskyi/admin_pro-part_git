@@ -238,15 +238,16 @@ async function importNews() {
 
         // Create news contents
         if (article.contents.length > 0) {
-          const contents = article.contents.map(content => 
-            contentRepository.create({
-              newsId: savedNews.id,
+          const contents = article.contents.map(content => {
+            const newsContent = contentRepository.create({
               type: content.type,
               title: content.title,
-              description: content.description,
+              description: content.description || undefined,
               order: content.order,
-            })
-          );
+            });
+            newsContent.news = savedNews;
+            return newsContent;
+          });
 
           await contentRepository.save(contents);
         }
