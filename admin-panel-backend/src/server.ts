@@ -49,10 +49,11 @@ const corsOptions = {
     // Перевіряємо, чи origin в списку дозволених
     if (allowedOrigins.includes(origin)) {
       // Повертаємо сам origin, щоб встановити конкретне значення в Access-Control-Allow-Origin
+      console.log(`✅ CORS allowed origin: ${origin}`);
       callback(null, origin);
     } else {
       console.warn(`⚠️  CORS blocked origin: ${origin}`);
-      callback(new Error('Not allowed by CORS'));
+      callback(new Error(`Not allowed by CORS: ${origin}`));
     }
   },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
