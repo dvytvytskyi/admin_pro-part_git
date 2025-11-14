@@ -27,6 +27,39 @@ const app = express();
 const PORT = process.env.PORT || 4000;
 
 // Middleware
+// CORS налаштування
+const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS 
+  ? process.env.CORS_ALLOWED_ORIGINS.split(',').map(origin => origin.trim())
+  : [
+      'https://propart.ae',
+      'https://www.propart.ae',
+      'https://system.pro-part.online',
+      'https://admin.pro-part.online',
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'http://localhost:3002',
+    ];
+
+const corsOptions = {
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    // Дозволяємо запити без origin (наприклад, з Postman або curl)
+    if (!origin) {
+      return callback(null, true);
+    }
+    // Перевіряємо, чи origin в списку дозволених
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn(`⚠️  CORS blocked origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-api-key', 'x-api-secret'],
+  credentials: true,
+  optionsSuccessStatus: 200,
+};
+
 // CORS для публічних ендпоінтів (дозволяє всі джерела, оскільки захищено через API key)
 app.use('/api/public', cors({
   origin: '*', // Дозволяємо всі джерела для публічних API
@@ -36,7 +69,7 @@ app.use('/api/public', cors({
 }));
 
 // CORS для інших ендпоінтів
-app.use(cors());
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use('/uploads', express.static('uploads'));
 
