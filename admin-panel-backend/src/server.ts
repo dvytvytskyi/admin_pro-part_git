@@ -41,14 +41,15 @@ const allowedOrigins = process.env.CORS_ALLOWED_ORIGINS
     ];
 
 const corsOptions = {
-  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean | string) => void) => {
     // Дозволяємо запити без origin (наприклад, з Postman або curl)
     if (!origin) {
       return callback(null, true);
     }
     // Перевіряємо, чи origin в списку дозволених
     if (allowedOrigins.includes(origin)) {
-      callback(null, true);
+      // Повертаємо сам origin, щоб встановити конкретне значення в Access-Control-Allow-Origin
+      callback(null, origin);
     } else {
       console.warn(`⚠️  CORS blocked origin: ${origin}`);
       callback(new Error('Not allowed by CORS'));
