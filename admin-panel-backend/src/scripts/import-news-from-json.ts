@@ -93,7 +93,7 @@ async function importNewsFromJson() {
 
         // Create news contents
         if (article.contents && article.contents.length > 0) {
-          const contents = article.contents.map(content => {
+          const contents = article.contents.map((content: any) => {
             const newsContent = contentRepository.create({
               type: content.type === 'text' ? NewsContentType.TEXT : NewsContentType.TEXT,
               title: content.title || '',
