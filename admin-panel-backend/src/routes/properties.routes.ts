@@ -1,6 +1,7 @@
 import express from 'express';
 import { AppDataSource } from '../config/database';
 import { Property, PropertyType } from '../entities/Property';
+import { Facility } from '../entities/Facility';
 import { authenticateJWT, authenticateApiKeyWithSecret, AuthRequest } from '../middleware/auth';
 import { successResponse } from '../utils/response';
 import { Conversions } from '../utils/conversions';
@@ -594,12 +595,57 @@ router.post('/', async (req, res) => {
 });
 
 router.patch('/:id', async (req, res) => {
-  await AppDataSource.getRepository(Property).update(req.params.id, req.body);
-  const property = await AppDataSource.getRepository(Property).findOne({
-    where: { id: req.params.id },
-    relations: ['facilities', 'units'],
-  });
-  res.json(successResponse(property));
+  try {
+    const propertyRepository = AppDataSource.getRepository(Property);
+    const property = await propertyRepository.findOne({
+      where: { id: req.params.id },
+      relations: ['facilities', 'units'],
+    });
+
+    if (!property) {
+      return res.status(404).json({ success: false, message: 'Property not found' });
+    }
+
+    // Filter out fields that don't exist in Property entity (like mainPhotoUrl)
+    const allowedFields = [
+      'name', 'photos', 'countryId', 'cityId', 'areaId', 'latitude', 'longitude',
+      'description', 'developerId', 'priceFrom', 'bedroomsFrom', 'bedroomsTo',
+      'bathroomsFrom', 'bathroomsTo', 'sizeFrom', 'sizeTo', 'paymentPlan',
+      'price', 'bedrooms', 'bathrooms', 'size', 'propertyType'
+    ];
+
+    const updateData: any = {};
+    for (const field of allowedFields) {
+      if (req.body[field] !== undefined) {
+        updateData[field] = req.body[field];
+      }
+    }
+
+    // Handle facilities separately if provided
+    if (req.body.facilities !== undefined && Array.isArray(req.body.facilities)) {
+      const facilityRepository = AppDataSource.getRepository(Facility);
+      const facilities = await facilityRepository.findBy({ id: req.body.facilities as any });
+      property.facilities = facilities;
+    }
+
+    // Update property fields
+    Object.assign(property, updateData);
+    const updatedProperty = await propertyRepository.save(property);
+
+    // Fetch with all relations
+    const completeProperty = await propertyRepository.findOne({
+      where: { id: updatedProperty.id },
+      relations: ['country', 'city', 'area', 'developer', 'facilities', 'units'],
+    });
+
+    res.json(successResponse(completeProperty));
+  } catch (error: any) {
+    console.error('Error updating property:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: error.message || 'Failed to update property' 
+    });
+  }
 });
 
 router.delete('/:id', async (req, res) => {
