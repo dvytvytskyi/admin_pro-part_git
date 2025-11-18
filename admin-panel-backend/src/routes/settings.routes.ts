@@ -72,16 +72,18 @@ const parseArray = (arr: any): string[] | null => {
     }
     
     // Split by comma and clean each URL
-    return cleaned
-      .split(',')
-      .map(url => {
-        // Clean up: remove leading { if present
+    // Важливо: перший елемент може мати { на початку, останній може мати } в кінці
+    const urls = cleaned.split(',');
+    return urls
+      .map((url, index) => {
+        // Clean up: remove leading { if present (особливо для першого елемента)
         let trimmed = url.trim();
-        if (trimmed.startsWith('{')) {
+        // Видаляємо { з початку (може бути кілька)
+        while (trimmed.startsWith('{')) {
           trimmed = trimmed.slice(1).trim();
         }
-        // Remove trailing } if present
-        if (trimmed.endsWith('}')) {
+        // Remove trailing } if present (особливо для останнього елемента)
+        while (trimmed.endsWith('}')) {
           trimmed = trimmed.slice(0, -1).trim();
         }
         // Remove quotes
