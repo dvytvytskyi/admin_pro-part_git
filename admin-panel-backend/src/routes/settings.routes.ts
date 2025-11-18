@@ -486,52 +486,54 @@ router.delete('/facilities/:id', async (req, res) => {
 });
 
 router.get('/developers', async (req, res) => {
-  const developers = await AppDataSource.getRepository(Developer).find();
-  // Обробляємо images через parseArray для правильного парсингу
-  // TypeORM simple-array може повертати масив, де перший елемент має зайву дужку {
-  const developersWithParsedImages = developers.map(dev => {
-    // TypeORM simple-array може повернути масив або рядок
-    let images = dev.images;
+  // Використовуємо raw query для отримання даних, щоб уникнути проблем з TypeORM simple-array
+  const queryRunner = AppDataSource.createQueryRunner();
+  await queryRunner.connect();
+  
+  try {
+    const developersRaw = await queryRunner.query(`
+      SELECT id, name, logo, description, images, "createdAt"
+      FROM developers
+      ORDER BY name ASC
+    `);
     
-    // Якщо це масив (TypeORM вже розпарсив), обробляємо кожен елемент
-    if (Array.isArray(images)) {
-      images = images.map((url: any) => {
-        if (typeof url === 'string') {
-          let cleaned = url.trim();
-          // Видаляємо { з початку
-          if (cleaned.startsWith('{')) {
-            cleaned = cleaned.slice(1).trim();
+    const developers = developersRaw.map((row: any) => {
+      // Парсимо images з текстового поля через parseArray
+      let images = parseArray(row.images) || [];
+      
+      // Додаткова очистка: видаляємо { з початку та } з кінця кожного URL
+      images = images
+        .map((url: string) => {
+          if (typeof url === 'string') {
+            let cleaned = url.trim();
+            // Видаляємо { з початку (може бути кілька)
+            while (cleaned.startsWith('{')) {
+              cleaned = cleaned.slice(1).trim();
+            }
+            // Видаляємо } з кінця (може бути кілька)
+            while (cleaned.endsWith('}')) {
+              cleaned = cleaned.slice(0, -1).trim();
+            }
+            return cleaned;
           }
-          // Видаляємо } з кінця
-          if (cleaned.endsWith('}')) {
-            cleaned = cleaned.slice(0, -1).trim();
-          }
-          return cleaned;
-        }
-        return url;
-      }).filter((url: string) => url && url.length > 0 && (url.startsWith('http://') || url.startsWith('https://')));
-    } else {
-      // Якщо це рядок, використовуємо parseArray
-      images = parseArray(images) || [];
-      // Додаткова очистка
-      images = images.map((url: string) => {
-        let cleaned = url.trim();
-        if (cleaned.startsWith('{')) {
-          cleaned = cleaned.slice(1).trim();
-        }
-        if (cleaned.endsWith('}')) {
-          cleaned = cleaned.slice(0, -1).trim();
-        }
-        return cleaned;
-      }).filter((url: string) => url && url.length > 0 && (url.startsWith('http://') || url.startsWith('https://')));
-    }
+          return url;
+        })
+        .filter((url: string) => url && url.length > 0 && (url.startsWith('http://') || url.startsWith('https://')));
+      
+      return {
+        id: row.id,
+        name: row.name,
+        logo: row.logo,
+        description: row.description,
+        images: images,
+        createdAt: row.createdAt,
+      };
+    });
     
-    return {
-      ...dev,
-      images: images || [],
-    };
-  });
-  res.json(successResponse(developersWithParsedImages));
+    res.json(successResponse(developers));
+  } finally {
+    await queryRunner.release();
+  }
 });
 
 router.post('/developers', async (req, res) => {
