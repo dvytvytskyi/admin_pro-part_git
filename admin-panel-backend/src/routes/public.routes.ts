@@ -19,12 +19,46 @@ const parseArray = (arr: any): string[] | null => {
   if (!arr) return null;
   if (Array.isArray(arr)) return arr; // Already an array
   if (typeof arr === 'string') {
-    // Parse PostgreSQL array format: {url1,url2,url3}
-    if (arr.startsWith('{') && arr.endsWith('}')) {
-      return arr.slice(1, -1).split(',').map(url => url.trim()).filter(url => url.length > 0);
+    // Remove any leading/trailing quotes and braces
+    let cleaned = arr.trim();
+    
+    // Handle PostgreSQL array format: {url1,url2,url3} or {"url1","url2","url3"}
+    if (cleaned.startsWith('{') && cleaned.endsWith('}')) {
+      cleaned = cleaned.slice(1, -1); // Remove outer braces
+      
+      // Split by comma, but handle quoted strings properly
+      const urls: string[] = [];
+      let current = '';
+      let inQuotes = false;
+      
+      for (let i = 0; i < cleaned.length; i++) {
+        const char = cleaned[i];
+        if (char === '"' && (i === 0 || cleaned[i - 1] !== '\\')) {
+          inQuotes = !inQuotes;
+        } else if (char === ',' && !inQuotes) {
+          const url = current.trim();
+          if (url) {
+            // Remove quotes from individual URL if present
+            urls.push(url.replace(/^["']|["']$/g, ''));
+          }
+          current = '';
+        } else {
+          current += char;
+        }
+      }
+      
+      // Add last URL
+      if (current.trim()) {
+        const url = current.trim();
+        urls.push(url.replace(/^["']|["']$/g, ''));
+      }
+      
+      return urls.filter(url => url.length > 0);
     }
-    // If it's a single URL string
-    return [arr];
+    
+    // If it's a single URL string (might have quotes)
+    const singleUrl = cleaned.replace(/^["']|["']$/g, '');
+    return singleUrl ? [singleUrl] : null;
   }
   return null;
 };

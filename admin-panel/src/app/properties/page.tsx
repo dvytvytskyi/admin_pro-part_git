@@ -8,6 +8,7 @@ import Badge from '@/components/ui/badge/Badge'
 import Button from '@/components/ui/button/Button'
 import Input from '@/components/form/input/InputField'
 import Pagination from '@/components/tables/Pagination'
+import { getThumbnailUrl } from '@/utils/imageOptimization'
 
 export default function PropertiesPage() {
   const router = useRouter()
@@ -229,7 +230,7 @@ export default function PropertiesPage() {
                     >
                       <TableCell className="px-5 py-4 sm:px-6 text-start">
                         <div className="flex items-center gap-3">
-                          {property.photos?.[0] ? (
+                          {property.photos?.[0] && getThumbnailUrl(property.photos[0], 48) ? (
                             <div className="relative w-12 h-12 overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800">
                               {/* Skeleton loader - show while loading (undefined or true) */}
                               {imageLoadingStates[property.id] !== false && (
@@ -245,8 +246,9 @@ export default function PropertiesPage() {
                               <Image
                                 width={48}
                                 height={48}
-                                src={property.photos[0]}
+                                src={getThumbnailUrl(property.photos[0], 48)!}
                                 alt={property.name || 'Property'}
+                                loading="lazy"
                                 className={`object-cover w-full h-full transition-opacity duration-300 ${
                                   imageLoadingStates[property.id] === false ? 'opacity-100' : 'opacity-0'
                                 }`}

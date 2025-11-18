@@ -2,17 +2,23 @@
 const nextConfig = {
   output: 'standalone',
   images: {
-    domains: ['example.com'],
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: '**',
+        hostname: 'api.reelly.io',
       },
       {
-        protocol: 'http',
-        hostname: '**',
+        protocol: 'https',
+        hostname: 'res.cloudinary.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'files.alnair.ae',
       },
     ],
+    formats: ['image/avif', 'image/webp'],
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256],
   },
   // Runtime конфігурація для API URL
   // Для локальної розробки: http://localhost:4000/api

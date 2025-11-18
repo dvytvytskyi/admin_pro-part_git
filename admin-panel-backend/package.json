@@ -44,6 +44,7 @@
     "check:secondary-duplicates": "ts-node-dev src/scripts/check-secondary-duplicates.ts",
     "remove:secondary-duplicates": "ts-node-dev src/scripts/remove-secondary-duplicates.ts",
     "migrate:area-images": "ts-node-dev src/scripts/migrate-area-images-to-cloudinary.ts",
+    "fix:area-images-format": "ts-node-dev src/scripts/fix-area-images-format.ts",
     "count:offplan-areas": "ts-node-dev src/scripts/count-offplan-by-area.ts",
     "list:all-areas": "ts-node-dev src/scripts/list-all-areas.ts",
     "count:areas-from-json": "ts-node-dev src/scripts/count-areas-from-json.ts",
