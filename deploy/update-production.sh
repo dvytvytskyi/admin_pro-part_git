@@ -5,7 +5,7 @@
 
 set -e
 
-SERVER_IP="135.181.201.185"
+SERVER_IP="88.99.38.25"
 SERVER_USER="root"
 PROJECT_DIR="/opt/admin-pro-part"
 

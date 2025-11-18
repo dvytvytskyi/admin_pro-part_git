@@ -8,7 +8,7 @@ set -e
 
 SERVER_IP="88.99.38.25"
 SERVER_USER="root"
-SERVER_PASSWORD="PgTeNqcgnwWu"
+SERVER_PASSWORD="VandiPCEXeep"
 PROJECT_DIR="/opt/admin-pro-part"
 REPO_URL="https://github.com/dvytvytskyi/admin_pro-part_git.git"
 DOMAIN="system.pro-part.online"
