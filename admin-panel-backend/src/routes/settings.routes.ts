@@ -488,10 +488,32 @@ router.delete('/facilities/:id', async (req, res) => {
 router.get('/developers', async (req, res) => {
   const developers = await AppDataSource.getRepository(Developer).find();
   // Обробляємо images через parseArray для правильного парсингу
-  const developersWithParsedImages = developers.map(dev => ({
-    ...dev,
-    images: parseArray(dev.images),
-  }));
+  // TypeORM simple-array може повертати масив, де перший елемент має зайву дужку {
+  const developersWithParsedImages = developers.map(dev => {
+    let parsedImages = parseArray(dev.images);
+    // Додаткова очистка: видаляємо { з початку кожного URL
+    if (parsedImages && Array.isArray(parsedImages)) {
+      parsedImages = parsedImages.map(url => {
+        if (typeof url === 'string') {
+          let cleaned = url.trim();
+          // Видаляємо { з початку
+          if (cleaned.startsWith('{')) {
+            cleaned = cleaned.slice(1).trim();
+          }
+          // Видаляємо } з кінця
+          if (cleaned.endsWith('}')) {
+            cleaned = cleaned.slice(0, -1).trim();
+          }
+          return cleaned;
+        }
+        return url;
+      }).filter(url => url && url.length > 0 && (url.startsWith('http://') || url.startsWith('https://')));
+    }
+    return {
+      ...dev,
+      images: parsedImages || [],
+    };
+  });
   res.json(successResponse(developersWithParsedImages));
 });
 
