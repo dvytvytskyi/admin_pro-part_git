@@ -820,9 +820,9 @@ function DevelopersTab({ developers, onReload }: any) {
         {searchQuery && (
           <div className="text-sm text-gray-500 dark:text-gray-400">
             {filteredDevelopers.length === 0 ? (
-              <span>No developers found matching "{searchQuery}"</span>
+              <span>No developers found matching &quot;{searchQuery}&quot;</span>
             ) : (
-              <span>Found {filteredDevelopers.length} developer{filteredDevelopers.length !== 1 ? 's' : ''} matching "{searchQuery}"</span>
+              <span>Found {filteredDevelopers.length} developer{filteredDevelopers.length !== 1 ? 's' : ''} matching &quot;{searchQuery}&quot;</span>
             )}
           </div>
         )}
@@ -912,7 +912,7 @@ function DevelopersTab({ developers, onReload }: any) {
                 Delete Developer
               </h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                Are you sure you want to delete <span className="font-medium text-gray-900 dark:text-white">"{developerToDelete?.name}"</span>? This action cannot be undone.
+                Are you sure you want to delete <span className="font-medium text-gray-900 dark:text-white">&quot;{developerToDelete?.name}&quot;</span>? This action cannot be undone.
               </p>
             </div>
           </div>
@@ -1256,7 +1256,7 @@ function FacilitiesTab({ facilities, onReload }: any) {
                 Delete Facility
               </h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                Are you sure you want to delete <span className="font-medium text-gray-900 dark:text-white">"{facilityToDelete?.nameEn || facilityToDelete?.nameRu || facilityToDelete?.nameAr || facilityToDelete?.name}"</span>? This action cannot be undone.
+                Are you sure you want to delete <span className="font-medium text-gray-900 dark:text-white">&quot;{facilityToDelete?.nameEn || facilityToDelete?.nameRu || facilityToDelete?.nameAr || facilityToDelete?.name}&quot;</span>? This action cannot be undone.
               </p>
             </div>
           </div>
@@ -1736,7 +1736,7 @@ function LocationsTab({ countries, cities, areas, onReload }: any) {
                 Delete {sectionName}
               </h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                Are you sure you want to delete <span className="font-medium text-gray-900 dark:text-white">"{itemToDelete?.nameEn || itemToDelete?.nameRu || itemToDelete?.nameAr || itemToDelete?.name || 'this item'}"</span>? This action cannot be undone.
+                Are you sure you want to delete <span className="font-medium text-gray-900 dark:text-white">&quot;{itemToDelete?.nameEn || itemToDelete?.nameRu || itemToDelete?.nameAr || itemToDelete?.name || 'this item'}&quot;</span>? This action cannot be undone.
               </p>
             </div>
           </div>
