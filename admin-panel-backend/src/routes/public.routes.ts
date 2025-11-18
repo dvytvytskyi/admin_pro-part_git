@@ -15,8 +15,9 @@ import { authenticateApiKeyWithSecret, AuthRequest } from '../middleware/auth';
 const router = express.Router();
 
 // Helper function to parse PostgreSQL array string to JavaScript array
-const parseArray = (arr: any): string[] | null => {
-  if (!arr) return null;
+// Always returns an array (empty array if no valid URLs found)
+const parseArray = (arr: any): string[] => {
+  if (!arr) return [];
   if (Array.isArray(arr)) return arr; // Already an array
   if (typeof arr === 'string') {
     // Remove any leading/trailing quotes and braces
@@ -58,9 +59,9 @@ const parseArray = (arr: any): string[] | null => {
     
     // If it's a single URL string (might have quotes)
     const singleUrl = cleaned.replace(/^["']|["']$/g, '');
-    return singleUrl ? [singleUrl] : null;
+    return singleUrl ? [singleUrl] : [];
   }
-  return null;
+  return [];
 };
 
 // GET /api/public/data - Get all public data (returns ALL properties from ALL areas, no filtering)
@@ -585,7 +586,7 @@ router.get('/areas', authenticateApiKeyWithSecret, async (req: AuthRequest, res)
         },
         description: (area as any).description || null,
         infrastructure: (area as any).infrastructure || null,
-        images: parseArray((area as any).images),
+        images: (area as any).images || [], // Already parsed on line 495
       };
     });
 
