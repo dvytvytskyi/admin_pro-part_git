@@ -490,10 +490,12 @@ router.get('/developers', async (req, res) => {
   // Обробляємо images через parseArray для правильного парсингу
   // TypeORM simple-array може повертати масив, де перший елемент має зайву дужку {
   const developersWithParsedImages = developers.map(dev => {
-    let parsedImages = parseArray(dev.images);
-    // Додаткова очистка: видаляємо { з початку кожного URL
-    if (parsedImages && Array.isArray(parsedImages)) {
-      parsedImages = parsedImages.map(url => {
+    // TypeORM simple-array може повернути масив або рядок
+    let images = dev.images;
+    
+    // Якщо це масив (TypeORM вже розпарсив), обробляємо кожен елемент
+    if (Array.isArray(images)) {
+      images = images.map((url: any) => {
         if (typeof url === 'string') {
           let cleaned = url.trim();
           // Видаляємо { з початку
@@ -507,11 +509,26 @@ router.get('/developers', async (req, res) => {
           return cleaned;
         }
         return url;
-      }).filter(url => url && url.length > 0 && (url.startsWith('http://') || url.startsWith('https://')));
+      }).filter((url: string) => url && url.length > 0 && (url.startsWith('http://') || url.startsWith('https://')));
+    } else {
+      // Якщо це рядок, використовуємо parseArray
+      images = parseArray(images) || [];
+      // Додаткова очистка
+      images = images.map((url: string) => {
+        let cleaned = url.trim();
+        if (cleaned.startsWith('{')) {
+          cleaned = cleaned.slice(1).trim();
+        }
+        if (cleaned.endsWith('}')) {
+          cleaned = cleaned.slice(0, -1).trim();
+        }
+        return cleaned;
+      }).filter((url: string) => url && url.length > 0 && (url.startsWith('http://') || url.startsWith('https://')));
     }
+    
     return {
       ...dev,
-      images: parsedImages || [],
+      images: images || [],
     };
   });
   res.json(successResponse(developersWithParsedImages));
