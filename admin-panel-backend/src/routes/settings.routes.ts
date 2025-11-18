@@ -487,7 +487,12 @@ router.delete('/facilities/:id', async (req, res) => {
 
 router.get('/developers', async (req, res) => {
   const developers = await AppDataSource.getRepository(Developer).find();
-  res.json(successResponse(developers));
+  // Обробляємо images через parseArray для правильного парсингу
+  const developersWithParsedImages = developers.map(dev => ({
+    ...dev,
+    images: parseArray(dev.images),
+  }));
+  res.json(successResponse(developersWithParsedImages));
 });
 
 router.post('/developers', async (req, res) => {
