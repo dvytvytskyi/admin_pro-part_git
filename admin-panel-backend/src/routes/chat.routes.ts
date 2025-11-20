@@ -2,13 +2,13 @@ import express from 'express';
 import { AppDataSource } from '../config/database';
 import { ChatSession, ChatSessionStatus } from '../entities/ChatSession';
 import { ChatMessage, ChatMessageSender } from '../entities/ChatMessage';
-import { authenticateToken } from '../middleware/auth';
+import { authenticateJWT } from '../middleware/auth';
 import { successResponse, errorResponse } from '../utils/response';
 
 const router = express.Router();
 
 // Всі роути потребують автентифікації
-router.use(authenticateToken);
+router.use(authenticateJWT);
 
 // GET /api/chat/sessions - Отримати список сесій
 router.get('/sessions', async (req, res) => {

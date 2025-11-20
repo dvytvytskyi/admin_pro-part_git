@@ -73,31 +73,25 @@ router.post('/', async (req, res) => {
     const { contents, ...newsData } = req.body;
     
     // Validate and prepare news data
-    const newsItemData = {
-      title: newsData.title.trim(),
-      description: newsData.description.trim(),
-      imageUrl: newsData.imageUrl && typeof newsData.imageUrl === 'string' ? newsData.imageUrl.trim() : null,
-      isPublished: newsData.isPublished === true || newsData.isPublished === 'true',
-      publishedAt: null as Date | null,
-    };
-
-    // Set publishedAt if isPublished is true
-    if (newsItemData.isPublished) {
-      newsItemData.publishedAt = newsData.publishedAt 
-        ? new Date(newsData.publishedAt) 
-        : new Date();
-    }
+    const isPublished = newsData.isPublished === true || newsData.isPublished === 'true';
+    const publishedAt = isPublished ? (newsData.publishedAt ? new Date(newsData.publishedAt) : new Date()) : undefined;
 
     console.log('[News API] Creating news item:', {
-      title: newsItemData.title.substring(0, 50) + '...',
-      descriptionLength: newsItemData.description.length,
-      hasImageUrl: !!newsItemData.imageUrl,
-      isPublished: newsItemData.isPublished,
-      hasPublishedAt: !!newsItemData.publishedAt,
+      title: newsData.title.trim().substring(0, 50) + '...',
+      descriptionLength: newsData.description.trim().length,
+      hasImageUrl: !!newsData.imageUrl,
+      isPublished: isPublished,
+      hasPublishedAt: !!publishedAt,
     });
     
     // Create news item
-    const newsItem = newsRepository.create(newsItemData);
+    const newsItem = newsRepository.create({
+      title: newsData.title.trim(),
+      description: newsData.description.trim(),
+      imageUrl: newsData.imageUrl && typeof newsData.imageUrl === 'string' ? newsData.imageUrl.trim() : null,
+      isPublished: isPublished,
+      publishedAt: publishedAt,
+    });
     const savedNews = await newsRepository.save(newsItem);
     console.log('[News API] ✅ News item created with ID:', savedNews.id);
     
@@ -235,10 +229,10 @@ router.patch('/:id', async (req, res) => {
       existingNews.isPublished = newsData.isPublished === true || newsData.isPublished === 'true';
     }
     
-    if (newsData.publishedAt !== undefined) {
-      existingNews.publishedAt = newsData.publishedAt 
-        ? new Date(newsData.publishedAt) 
-        : null;
+    if (newsData.publishedAt !== undefined && newsData.publishedAt !== null) {
+      existingNews.publishedAt = new Date(newsData.publishedAt);
+    } else if (newsData.publishedAt === null) {
+      existingNews.publishedAt = null as any;
     }
     
     await newsRepository.save(existingNews);
