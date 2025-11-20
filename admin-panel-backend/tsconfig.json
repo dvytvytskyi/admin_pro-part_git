@@ -12,5 +12,5 @@
     "emitDecoratorMetadata": true,
     "resolveJsonModule": true
   },
-  "exclude": ["node_modules", "dist", "src/scripts/check-developer-duplicates.ts", "src/scripts/check-developers-data.ts", "src/scripts/remove-developers-without-data.ts"]
+  "exclude": ["node_modules", "dist", "src/scripts"]
 }
