@@ -24,12 +24,30 @@ export class Area {
 
   @Column('jsonb', { nullable: true })
   description?: {
+    en?: {
+      title?: string;
+      description?: string;
+    };
+    ru?: {
+      title?: string;
+      description?: string;
+    };
+    // Backward compatibility - old format without en/ru
     title?: string;
     description?: string;
   };
 
   @Column('jsonb', { nullable: true })
   infrastructure?: {
+    en?: {
+      title?: string;
+      description?: string;
+    };
+    ru?: {
+      title?: string;
+      description?: string;
+    };
+    // Backward compatibility - old format without en/ru
     title?: string;
     description?: string;
   };

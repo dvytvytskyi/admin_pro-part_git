@@ -20,6 +20,8 @@ export { Favorite } from './Favorite';
 export { Investment, InvestmentStatus } from './Investment';
 export { PasswordResetToken } from './PasswordResetToken';
 export { CourseProgress } from './CourseProgress';
+export { ChatSession, ChatSessionStatus } from './ChatSession';
+export { ChatMessage, ChatMessageSender } from './ChatMessage';
 
 // Array of all entities for TypeORM DataSource
 import { User } from './User';
@@ -43,6 +45,8 @@ import { Favorite } from './Favorite';
 import { Investment } from './Investment';
 import { PasswordResetToken } from './PasswordResetToken';
 import { CourseProgress } from './CourseProgress';
+import { ChatSession } from './ChatSession';
+import { ChatMessage } from './ChatMessage';
 
 export const entities = [
   User,
@@ -66,5 +70,7 @@ export const entities = [
   Investment,
   PasswordResetToken,
   CourseProgress,
+  ChatSession,
+  ChatMessage,
 ];
 

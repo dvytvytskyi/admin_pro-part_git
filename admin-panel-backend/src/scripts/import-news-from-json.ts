@@ -36,13 +36,16 @@ async function importNewsFromJson() {
     const existingNewsCount = await newsRepository.count();
     if (existingNewsCount > 0) {
       console.log(`⚠️  News table already contains ${existingNewsCount} articles.`);
-      console.log('   Skipping import. If you want to import anyway, clear the table first.\n');
-      await AppDataSource.destroy();
-      return;
+      console.log('   Will add new articles to existing ones.\n');
     }
 
-    // Find news.json file
+    // Find news-import.json or news.json file
     const possiblePaths = [
+      path.resolve(__dirname, '../../../news-import.json'),
+      path.resolve(process.cwd(), 'news-import.json'),
+      '/app/news-import.json',
+      path.join(process.cwd(), 'news-import.json'),
+      path.resolve(__dirname, '../../news-import.json'),
       path.resolve(__dirname, '../../../news.json'),
       path.resolve(process.cwd(), 'news.json'),
       '/app/news.json',
@@ -64,9 +67,17 @@ async function importNewsFromJson() {
 
     console.log(`📖 Reading file: ${jsonPath}`);
     const jsonContent = fs.readFileSync(jsonPath, 'utf-8');
-    const data: NewsJson = JSON.parse(jsonContent);
-    const articles = data.news || data as any;
-    const articlesArray = Array.isArray(articles) ? articles : (data as any).news || [];
+    const data: any = JSON.parse(jsonContent);
+    
+    // Handle both formats: { news: [...] } and [...]
+    let articlesArray: any[] = [];
+    if (Array.isArray(data)) {
+      articlesArray = data;
+    } else if (data.news && Array.isArray(data.news)) {
+      articlesArray = data.news;
+    } else {
+      throw new Error('Invalid JSON format. Expected array or object with "news" property containing array.');
+    }
     
     console.log(`✅ Parsed ${articlesArray.length} articles\n`);
 
@@ -94,13 +105,19 @@ async function importNewsFromJson() {
         // Create news contents
         if (article.contents && article.contents.length > 0) {
           const contents = article.contents.map((content: any) => {
+            const contentType = content.type === 'image' ? NewsContentType.IMAGE :
+                               content.type === 'video' ? NewsContentType.VIDEO :
+                               NewsContentType.TEXT;
+            
             const newsContent = contentRepository.create({
-              type: content.type === 'text' ? NewsContentType.TEXT : NewsContentType.TEXT,
+              newsId: savedNews.id,
+              type: contentType,
               title: content.title || '',
-              description: content.description || undefined,
-              order: content.order,
+              description: content.description || null,
+              imageUrl: content.imageUrl || null,
+              videoUrl: content.videoUrl || null,
+              order: content.order !== undefined ? content.order : 0,
             });
-            newsContent.news = savedNews;
             return newsContent;
           });
 

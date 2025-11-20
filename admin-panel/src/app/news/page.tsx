@@ -26,10 +26,31 @@ export default function NewsPage() {
       console.log('🔍 API instance baseURL:', api.defaults.baseURL)
       console.log('🔍 Token exists:', typeof window !== 'undefined' ? !!localStorage.getItem('token') : 'N/A')
       
-      const { data } = await api.get('/news')
-      console.log('✅ News API response:', data)
-      const newsData = data.data || []
+      const response = await api.get('/news')
+      console.log('✅ News API full response:', response)
+      console.log('✅ News API response.data:', response.data)
+      
+      // API returns { success: true, data: [...] }
+      let newsData = []
+      if (response.data) {
+        if (response.data.success && Array.isArray(response.data.data)) {
+          newsData = response.data.data
+        } else if (Array.isArray(response.data)) {
+          newsData = response.data
+        } else if (response.data.data && Array.isArray(response.data.data)) {
+          newsData = response.data.data
+        }
+      }
       console.log('📰 News data count:', newsData.length)
+      console.log('📰 First news item:', newsData[0])
+      console.log('📰 News data sample:', newsData.slice(0, 3))
+      
+      if (!Array.isArray(newsData)) {
+        console.error('❌ News data is not an array:', typeof newsData, newsData)
+        setNews([])
+        return
+      }
+      
       // Format dates and ensure proper structure
       const formattedNews = newsData.map((item: any) => ({
         ...item,
@@ -42,12 +63,13 @@ export default function NewsPage() {
           day: 'numeric' 
         }) : '-',
       }))
-      console.log('Formatted news count:', formattedNews.length)
+      console.log('✅ Formatted news count:', formattedNews.length)
       setNews(formattedNews)
     } catch (error: any) {
-      console.error('Error loading news:', error)
-      console.error('Error response:', error.response?.data)
-      console.error('Error status:', error.response?.status)
+      console.error('❌ Error loading news:', error)
+      console.error('❌ Error response:', error.response?.data)
+      console.error('❌ Error status:', error.response?.status)
+      console.error('❌ Error message:', error.message)
       alert(`Помилка завантаження новин: ${error.response?.data?.message || error.message || 'Невідома помилка'}`)
       setNews([])
     } finally {

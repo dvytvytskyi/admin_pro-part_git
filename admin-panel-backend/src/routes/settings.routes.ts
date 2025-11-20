@@ -522,11 +522,41 @@ router.get('/developers', async (req, res) => {
         })
         .filter((url: string) => url && url.length > 0 && (url.startsWith('http://') || url.startsWith('https://')));
       
+      // Обробляємо description - може бути рядком або JSONB об'єктом
+      let description = row.description;
+      if (description) {
+        if (typeof description === 'string') {
+          // Старий формат - рядок, конвертуємо в JSONB структуру
+          try {
+            // Спробуємо парсити як JSON
+            const parsed = JSON.parse(description);
+            if (typeof parsed === 'object' && parsed !== null) {
+              description = parsed;
+            } else {
+              // Якщо не об'єкт, зберігаємо як en
+              description = { en: { description }, ru: {} };
+            }
+          } catch {
+            // Якщо не JSON, зберігаємо як en
+            description = { en: { description }, ru: {} };
+          }
+        } else if (typeof description === 'object') {
+          // Вже JSONB об'єкт - перевіряємо структуру
+          if (!description.en && !description.ru) {
+            // Старий формат об'єкта - конвертуємо
+            description = {
+              en: { description: description.description || description },
+              ru: {},
+            };
+          }
+        }
+      }
+      
       return {
         id: row.id,
         name: row.name,
         logo: row.logo,
-        description: row.description,
+        description: description || null,
         images: images,
         createdAt: row.createdAt,
       };

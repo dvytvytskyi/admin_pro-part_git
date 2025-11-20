@@ -11,8 +11,17 @@ export class Developer {
   @Column({ nullable: true })
   logo!: string;
 
-  @Column('text', { nullable: true })
-  description!: string;
+  @Column('jsonb', { nullable: true })
+  description?: {
+    en?: {
+      description?: string;
+    };
+    ru?: {
+      description?: string;
+    };
+    // Backward compatibility - old format as plain string
+    description?: string;
+  } | string;
 
   @Column('simple-array', { nullable: true })
   images?: string[]; // Масив URL фото

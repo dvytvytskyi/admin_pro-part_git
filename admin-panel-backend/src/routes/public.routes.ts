@@ -677,17 +677,37 @@ router.get('/developers', authenticateApiKeyWithSecret, async (req: AuthRequest,
 
       // Парсимо description як JSON, якщо це можливо, інакше повертаємо як рядок
       let descriptionField: any = null;
+      // Обробляємо description - може бути рядком або JSONB об'єктом
       if (developer.description) {
-        try {
-          // Спробуємо парсити як JSON
-          const parsed = JSON.parse(developer.description);
-          if (typeof parsed === 'object' && parsed !== null) {
-            descriptionField = parsed;
+        if (typeof developer.description === 'string') {
+          // Старий формат - рядок
+          try {
+            const parsed = JSON.parse(developer.description);
+            if (typeof parsed === 'object' && parsed !== null) {
+              descriptionField = parsed;
+            } else {
+              // Якщо не об'єкт, зберігаємо як en
+              descriptionField = { en: { description: developer.description }, ru: {} };
+            }
+          } catch {
+            // Якщо не JSON, зберігаємо як en
+            descriptionField = { en: { description: developer.description }, ru: {} };
+          }
+        } else if (typeof developer.description === 'object') {
+          // Вже JSONB об'єкт
+          if (developer.description.en || developer.description.ru) {
+            // Новий формат з en/ru
+            descriptionField = developer.description;
+          } else if (developer.description.description) {
+            // Старий формат об'єкта - конвертуємо
+            descriptionField = {
+              en: { description: developer.description.description },
+              ru: {},
+            };
           } else {
             descriptionField = developer.description;
           }
-        } catch {
-          // Якщо не JSON, повертаємо як рядок
+        } else {
           descriptionField = developer.description;
         }
       }

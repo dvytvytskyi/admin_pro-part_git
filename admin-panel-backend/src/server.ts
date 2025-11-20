@@ -16,10 +16,12 @@ import usersRoutes from './routes/users.routes';
 import uploadRoutes from './routes/upload.routes';
 import apiKeysRoutes from './routes/api-keys.routes';
 import publicRoutes from './routes/public.routes';
+import publicChatRoutes from './routes/public-chat.routes';
 import collectionsRoutes from './routes/collections.routes';
 import favoritesRoutes from './routes/favorites.routes';
 import investmentsRoutes from './routes/investments.routes';
 import courseProgressRoutes from './routes/course-progress.routes';
+import chatRoutes from './routes/chat.routes';
 
 dotenv.config();
 
@@ -85,10 +87,12 @@ app.use('/api/support', supportRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/public', publicRoutes);
+app.use('/api/public', publicChatRoutes);
 app.use('/api/collections', collectionsRoutes);
 app.use('/api/favorites', favoritesRoutes);
 app.use('/api/investments', investmentsRoutes);
 app.use('/api/course-progress', courseProgressRoutes);
+app.use('/api/chat', chatRoutes);
 
 // Root route
 app.get('/', (req, res) => {

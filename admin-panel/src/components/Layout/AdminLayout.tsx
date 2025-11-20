@@ -7,7 +7,8 @@ import {
   UserOutlined, 
   BookOutlined, 
   FileTextOutlined, 
-  MessageOutlined, 
+  MessageOutlined,
+  WechatOutlined,
   SettingOutlined,
   LogoutOutlined
 } from '@ant-design/icons'
@@ -25,6 +26,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { key: '/users', icon: <UserOutlined />, label: 'Користувачі' },
     { key: '/knowledge-base', icon: <BookOutlined />, label: 'База Знань' },
     { key: '/news', icon: <FileTextOutlined />, label: 'Новини' },
+    { key: '/chat', icon: <WechatOutlined />, label: 'Чати' },
     { key: '/support', icon: <MessageOutlined />, label: 'Підтримка' },
     { key: '/settings', icon: <SettingOutlined />, label: 'Налаштування' },
   ]

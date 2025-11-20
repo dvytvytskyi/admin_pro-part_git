@@ -11,6 +11,7 @@ import {
   UsersIcon,
   KnowledgeIcon,
   NewsIcon,
+  ChatIcon,
   SettingsIcon,
   IntegrationsIcon,
 } from "../icons/index";
@@ -48,6 +49,11 @@ const navItems: NavItem[] = [
     icon: <NewsIcon />,
     name: "News",
     path: "/news",
+  },
+  {
+    icon: <ChatIcon />,
+    name: "Chat",
+    path: "/chat",
   },
 ];
 

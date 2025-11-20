@@ -139,13 +139,24 @@ async function importDevelopersData() {
           .map(src => src.trim()); // Keep full URL, only trim whitespace
       }
 
-      // Update developer using raw SQL to properly handle arrays
+      // Prepare description in JSONB format with en/ru structure
+      let descriptionJsonb: any = null;
+      if (description) {
+        descriptionJsonb = {
+          en: {
+            description: description,
+          },
+          ru: {}, // Will be filled by translation script
+        };
+      }
+
+      // Update developer using raw SQL to properly handle arrays and JSONB
       const updateData: any[] = [];
       const setClauses: string[] = [];
 
-      if (description) {
-        setClauses.push(`description = $${updateData.length + 1}`);
-        updateData.push(description);
+      if (descriptionJsonb) {
+        setClauses.push(`description = $${updateData.length + 1}::jsonb`);
+        updateData.push(JSON.stringify(descriptionJsonb));
       } else {
         setClauses.push(`description = NULL`);
       }

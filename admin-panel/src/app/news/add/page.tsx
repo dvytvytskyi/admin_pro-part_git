@@ -151,7 +151,27 @@ export default function AddNewsPage() {
       router.push('/news')
     } catch (err: any) {
       console.error('Error creating news:', err)
-      setError(err.response?.data?.message || 'Failed to create news. Please try again.')
+      console.error('Error details:', {
+        status: err.response?.status,
+        data: err.response?.data,
+        message: err.message,
+      })
+      
+      // Extract error message from response
+      let errorMessage = 'Failed to create news. Please try again.'
+      if (err.response?.data) {
+        if (err.response.data.message) {
+          errorMessage = err.response.data.message
+        } else if (err.response.data.error) {
+          errorMessage = err.response.data.error
+        } else if (typeof err.response.data === 'string') {
+          errorMessage = err.response.data
+        }
+      } else if (err.message) {
+        errorMessage = err.message
+      }
+      
+      setError(errorMessage)
     } finally {
       setLoading(false)
     }
