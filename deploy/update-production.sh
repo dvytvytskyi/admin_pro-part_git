@@ -71,6 +71,14 @@ echo "⏳ Очікування запуску контейнерів (10 сек�
 sleep 10
 
 echo ""
+echo "🗄️  Створення таблиць чату (якщо потрібно)..."
+docker-compose -f docker-compose.prod.yml exec -T admin-pro-part-backend npm run create:chat-tables 2>&1 | tail -5 || echo "   ⚠️  Помилка створення таблиць (можливо вже існують)"
+
+echo ""
+echo "📰 Імпорт новин (якщо потрібно)..."
+docker-compose -f docker-compose.prod.yml exec -T admin-pro-part-backend npm run import:news-txt 2>&1 | tail -10 || echo "   ⚠️  Помилка імпорту новин (можливо вже імпортовані)"
+
+echo ""
 echo "🔍 Перевірка статусу контейнерів:"
 docker ps --format "table {{.Names}}\t{{.Status}}" | grep -E "admin-pro-part|NAMES" || true
 
